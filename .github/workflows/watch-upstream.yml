@@ -122,14 +122,7 @@ jobs:
           # Open PR
           gh pr create \
             --title "Update to Liquorix ${LATEST}" \
-            --body "Upstream damentz/liquorix-package has a new release: \`${LATEST}\`.
-
-This PR updates the VERSION file. Once merged, tag the commit to trigger the release pipeline:
-
-\`\`\`bash
-git tag v${LATEST}
-git push origin v${LATEST}
-\`\`\`" \
+            --body "$(printf 'Upstream damentz/liquorix-package has a new release: `%s`.\n\nThis PR updates the VERSION file. Once merged, tag the commit to trigger the release pipeline:\n\n```bash\ngit tag v%s\ngit push origin v%s\n```' "${LATEST}" "${LATEST}" "${LATEST}")" \
             --base main \
             --head "$BRANCH" \
             --label "upstream-update" || true
