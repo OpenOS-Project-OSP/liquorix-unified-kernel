@@ -10,15 +10,15 @@ build_rpm() {
 
     log INFO "Building Fedora RPM (jobs=${procs}, build=${build_num})"
 
-    local image="liquorix-build-fedora"
+    # Default to latest stable Fedora release
+    local fedora_release="${FEDORA_RELEASE:-42}"
+    local image="liquorix_amd64/fedora/${fedora_release}"
     local out_dir="${REPO_ROOT}/artifacts/fedora"
     mkdir -p "$out_dir"
 
     if ! docker image inspect "$image" &>/dev/null; then
-        log INFO "Bootstrapping Docker image ${image}"
-        docker build \
-            -t "$image" \
-            "${REPO_ROOT}/packaging/fedora"
+        log WARN "Docker image ${image} not found. Run: make bootstrap-fedora"
+        exit 1
     fi
 
     docker run --rm \
@@ -26,7 +26,8 @@ build_rpm() {
         -v "${out_dir}:/artifacts" \
         -e PROCS="$procs" \
         -e BUILD="$build_num" \
-        -e ARCH="$ARCH" \
+        -e ARCH="amd64" \
+        -e RELEASE="$fedora_release" \
         "$image" \
         /build/packaging/fedora/build-inside.sh
 

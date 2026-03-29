@@ -81,18 +81,23 @@ build: ## Build for a single release (needs DISTRO= and RELEASE= for deb targets
 	$(SCRIPTS)/build.sh --distro $(DISTRO) $(if $(RELEASE),--release $(RELEASE),) --arch $(ARCH) --jobs $(PROCS) --build $(BUILD)
 
 # ── Bootstrap Docker images ───────────────────────────────────────────────────
+# bootstrap-* targets fetch upstream Dockerfiles + container scripts from
+# damentz/liquorix-package, then build the Docker images.
 
-bootstrap-debian: ## Bootstrap Debian Docker build images
-	docker build -t liquorix-build-debian packaging/debian
+bootstrap-debian: ## Fetch upstream scripts and build Debian Docker images
+	$(SCRIPTS)/bootstrap.sh debian
 
-bootstrap-ubuntu: ## Bootstrap Ubuntu Docker build images
-	docker build -t liquorix-build-ubuntu packaging/debian
+bootstrap-ubuntu: ## Fetch upstream scripts and build Ubuntu Docker images
+	$(SCRIPTS)/bootstrap.sh ubuntu
 
-bootstrap-arch: ## Bootstrap Arch Linux Docker build image
-	docker build -t liquorix-build-archlinux packaging/arch
+bootstrap-arch: ## Fetch upstream scripts and build Arch Linux Docker image
+	$(SCRIPTS)/bootstrap.sh arch
 
-bootstrap-fedora: ## Bootstrap Fedora Docker build image
-	docker build -t liquorix-build-fedora packaging/fedora
+bootstrap-fedora: ## Fetch upstream scripts and build Fedora Docker images
+	$(SCRIPTS)/bootstrap.sh fedora
+
+bootstrap-all: ## Bootstrap all distros
+	$(SCRIPTS)/bootstrap.sh
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 

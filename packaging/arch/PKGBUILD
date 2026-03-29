@@ -1,0 +1,206 @@
+# Maintainer: liquorix-unified
+# Credits: archdevlab, Jan Alexander Steffens (heftig), Andreas Radke
+
+# Kernel version and Liquorix release are injected by build-inside.sh
+# via environment variables, then substituted below.
+# Defaults here are updated by the CI/build system.
+_major=${KERNEL_MAJOR:-6.12}
+_liquorixrel=${LQX_REL:-1}
+_kernelver="${_major}.$(echo ${KERNEL_VERSION:-6.12.1} | cut -d. -f3)"
+
+# Compiler selection: set _compiler=1 for GCC (default), 2 for Clang+LLVM
+if [[ -z ${_compiler+x} ]]; then
+    _compiler=1
+fi
+
+if [[ "$_compiler" == "1" ]]; then
+    BUILD_FLAGS=(CC=gcc CXX=g++ HOSTCC=gcc HOSTCXX=g++)
+elif [[ "$_compiler" == "2" ]]; then
+    BUILD_FLAGS=(CC=clang CXX=clang++ HOSTCC=clang HOSTCXX=clang++
+                 LD=ld.lld LLVM=1 LLVM_IAS=1)
+else
+    _compiler=1
+    BUILD_FLAGS=(CC=gcc CXX=g++ HOSTCC=gcc HOSTCXX=g++)
+fi
+
+pkgbase=linux-lqx
+pkgver="${_kernelver}.lqx${_liquorixrel}"
+pkgrel=1
+arch=(x86_64)
+url='https://liquorix.net'
+license=(GPL-2.0-only)
+
+makedepends=(
+    bc cpio gettext libelf pahole perl python
+    rust rust-bindgen rust-src tar xz kmod
+    bison flex zstd make patch gcc gcc-libs glibc binutils git xmlto
+)
+[[ "$_compiler" == "2" ]] && makedepends+=(clang llvm llvm-libs lld)
+
+options=(!debug !strip)
+
+source=(
+    "https://cdn.kernel.org/pub/linux/kernel/v${_major%%.*}.x/linux-${_major}.tar.xz"
+    "https://github.com/damentz/liquorix-package/archive/${_major}-${_liquorixrel}.tar.gz"
+)
+
+export KBUILD_BUILD_HOST=archlinux
+export KBUILD_BUILD_USER=$pkgbase
+export KBUILD_BUILD_TIMESTAMP="$(date -Ru${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EPOCH})"
+
+prepare() {
+    cd "${srcdir}/linux-${_major}"
+
+    # Apply Liquorix patch series
+    local _patchfolder="${srcdir}/liquorix-package-${_major}-${_liquorixrel}/linux-liquorix/debian/patches"
+    grep -P '^(zen|lqx)/' "${_patchfolder}/series" | while IFS= read -r line; do
+        msg "Applying patch: $line"
+        patch -Np1 -i "${_patchfolder}/${line}"
+    done
+
+    # Apply Liquorix config
+    msg "Applying Liquorix config"
+    cp "${srcdir}/liquorix-package-${_major}-${_liquorixrel}/linux-liquorix/debian/config/kernelarch-x86/config-arch-64" \
+        .config
+
+    # Disable PDS/BMQ (not used in current Liquorix)
+    scripts/config --disable CONFIG_SCHED_ALT
+    scripts/config --disable CONFIG_PDS
+    scripts/config --disable CONFIG_BMQ
+
+    # Clang LTO
+    if [[ "$_compiler" == "2" ]]; then
+        msg "Enabling Clang ThinLTO"
+        scripts/config --enable  CONFIG_LTO
+        scripts/config --enable  CONFIG_LTO_CLANG
+        scripts/config --enable  CONFIG_ARCH_SUPPORTS_LTO_CLANG
+        scripts/config --enable  CONFIG_ARCH_SUPPORTS_LTO_CLANG_THIN
+        scripts/config --disable CONFIG_LTO_NONE
+        scripts/config --enable  CONFIG_HAS_LTO_CLANG
+        scripts/config --disable CONFIG_LTO_CLANG_FULL
+        scripts/config --enable  CONFIG_LTO_CLANG_THIN
+        scripts/config --enable  CONFIG_HAVE_GCC_PLUGINS
+    fi
+
+    # Arch-specific adjustments
+    scripts/config -e CONFIG_DEBUG_INFO_DWARF5
+    scripts/config --set-str CONFIG_SECURITY_TOMOYO_POLICY_LOADER    "/usr/bin/tomoyo-init"
+    scripts/config --set-str CONFIG_SECURITY_TOMOYO_ACTIVATION_TRIGGER "/usr/lib/systemd/systemd"
+    scripts/config --set-str CONFIG_DEFAULT_HOSTNAME "archlinux"
+    scripts/config --set-str CONFIG_LOCALVERSION ""
+    scripts/config --enable  CONFIG_LOCALVERSION_AUTO
+
+    # Suppress depmod (run by pacman post-install instead)
+    sed -i '2iexit 0' scripts/depmod.sh
+
+    echo "-${pkgbase}" > localversion
+
+    msg "Running make olddefconfig"
+    make ARCH=x86 "${BUILD_FLAGS[@]}" olddefconfig
+
+    make -s kernelrelease > version
+    msg "Prepared $pkgbase version $(<version)"
+}
+
+build() {
+    cd "${srcdir}/linux-${_major}"
+    make ARCH=x86 "${BUILD_FLAGS[@]}" -j"$(nproc)" all
+}
+
+_package() {
+    pkgdesc="The Liquorix kernel and modules"
+    depends=(coreutils kmod initramfs)
+    optdepends=('wireless-regdb: to set the correct wireless channels of your country'
+                'linux-firmware: firmware images needed for some devices')
+    provides=("linux=${pkgver}" VIRTUALBOX-GUEST-MODULES WIREGUARD-MODULE KSMBD-MODULE)
+    replaces=(virtualbox-guest-modules-arch wireguard-arch)
+
+    cd "${srcdir}/linux-${_major}"
+    local kernver="$(<version)"
+    local modulesdir="${pkgdir}/usr/lib/modules/${kernver}"
+
+    msg "Installing boot image"
+    install -Dm644 "$(make -s image_name)" "${modulesdir}/vmlinuz"
+    echo "$pkgbase" | install -Dm644 /dev/stdin "${modulesdir}/pkgbase"
+
+    msg "Installing modules"
+    make ARCH=x86 INSTALL_MOD_PATH="${pkgdir}/usr" INSTALL_MOD_STRIP=1 \
+        DEPMOD=/doesnt/exist modules_install
+
+    rm "${modulesdir}/source" "${modulesdir}/build"
+}
+
+_package-headers() {
+    pkgdesc="Headers and scripts for building modules for the Liquorix kernel"
+    depends=(pahole)
+    provides=("linux-headers=${pkgver}")
+
+    cd "${srcdir}/linux-${_major}"
+    local builddir="${pkgdir}/usr/lib/modules/$(<version)/build"
+
+    msg "Installing build files"
+    install -Dt "$builddir" -m644 .config Makefile Module.symvers System.map \
+        localversion version vmlinux
+    install -Dt "$builddir/kernel" -m644 kernel/Makefile
+    install -Dt "$builddir/arch/x86" -m644 arch/x86/Makefile
+    cp -t "$builddir" -a scripts
+
+    install -Dt "$builddir/tools/objtool" tools/objtool/objtool
+    mkdir -p "$builddir"/{fs/xfs,mm}
+
+    msg "Installing headers"
+    cp -t "$builddir" -a include
+    cp -t "$builddir/arch/x86" -a arch/x86/include
+    install -Dt "$builddir/arch/x86/kernel" -m644 arch/x86/kernel/asm-offsets.s
+    install -Dt "$builddir/drivers/md" -m644 drivers/md/*.h
+    install -Dt "$builddir/net/mac80211" -m644 net/mac80211/*.h
+    install -Dt "$builddir/drivers/media/i2c" -m644 drivers/media/i2c/msp3400-driver.h
+    install -Dt "$builddir/drivers/media/usb/dvb-usb" -m644 drivers/media/usb/dvb-usb/*.h
+    install -Dt "$builddir/drivers/media/dvb-frontends" -m644 drivers/media/dvb-frontends/*.h
+    install -Dt "$builddir/drivers/media/tuners" -m644 drivers/media/tuners/*.h
+    install -Dt "$builddir/drivers/iio/common/hid-sensors" -m644 \
+        drivers/iio/common/hid-sensors/*.h
+
+    msg "Installing KConfig files"
+    find . -name 'Kconfig*' -exec install -Dm644 {} "$builddir/{}" \;
+
+    msg "Removing unneeded architectures"
+    local arch
+    for arch in "$builddir"/arch/*/; do
+        [[ $arch = */x86/ ]] && continue
+        rm -r "$arch"
+    done
+
+    msg "Removing documentation"
+    rm -r "$builddir/Documentation"
+
+    msg "Removing broken symlinks"
+    find -L "$builddir" -type l -delete
+
+    msg "Stripping build tools"
+    local file
+    while read -rd '' file; do
+        case "$(file -Sib "$file")" in
+            application/x-sharedlib\;*)
+                strip -v $STRIP_SHARED "$file" ;;
+            application/x-archive\;*)
+                strip -v $STRIP_STATIC "$file" ;;
+            application/x-executable\;*)
+                strip -v $STRIP_BINARIES "$file" ;;
+            application/x-pie-executable\;*)
+                strip -v $STRIP_SHARED "$file" ;;
+        esac
+    done < <(find "$builddir" -type f -perm -u+x ! -name vmlinux -print0)
+
+    msg "Adding symlink"
+    mkdir -p "${pkgdir}/usr/src"
+    ln -sr "$builddir" "${pkgdir}/usr/src/$pkgbase"
+}
+
+pkgname=("$pkgbase" "$pkgbase-headers")
+for _p in "${pkgname[@]}"; do
+    eval "package_${_p}() {
+        $(declare -f "_package${_p#$pkgbase}")
+        _package${_p#$pkgbase}
+    }"
+done

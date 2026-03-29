@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: ["main"]
   workflow_dispatch:
-    inputs:
-      kernel_version:
-        description: "Kernel version to build (e.g. 6.12.1)"
-        required: false
 
 # Cancel in-flight runs for the same branch on new pushes
 concurrency:
@@ -17,7 +13,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ── Distro matrix (x86_64, pre-built package verification) ─────────────────
   build-deb:
     name: "deb / ${{ matrix.distro }} ${{ matrix.release }}"
     runs-on: ubuntu-latest
@@ -32,7 +27,7 @@ jobs:
           - distro: ubuntu
             release: noble      # 24.04 LTS
           - distro: ubuntu
-            release: oracular   # 24.10
+            release: questing
 
     steps:
       - uses: actions/checkout@v4
@@ -40,8 +35,8 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Bootstrap image
-        run: make bootstrap-${{ matrix.distro }}
+      - name: Bootstrap
+        run: ./scripts/bootstrap.sh ${{ matrix.distro }}
 
       - name: Build packages
         run: |
@@ -67,8 +62,8 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Bootstrap image
-        run: make bootstrap-arch
+      - name: Bootstrap
+        run: ./scripts/bootstrap.sh arch
 
       - name: Build package
         run: make build-arch ARCH=x86_64 PROCS=2
@@ -81,8 +76,12 @@ jobs:
           retention-days: 7
 
   build-fedora:
-    name: "rpm / fedora x86_64"
+    name: "rpm / fedora ${{ matrix.release }}"
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        release: ["41", "42"]
 
     steps:
       - uses: actions/checkout@v4
@@ -90,23 +89,19 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Bootstrap image
-        run: make bootstrap-fedora
+      - name: Bootstrap
+        run: ./scripts/bootstrap.sh fedora
 
       - name: Build RPMs
-        run: make build-fedora ARCH=x86_64 PROCS=2
+        run: make build-fedora ARCH=x86_64 FEDORA_RELEASE=${{ matrix.release }} PROCS=2
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: liquorix-fedora-x86_64
+          name: liquorix-fedora-${{ matrix.release }}-x86_64
           path: artifacts/fedora/
           retention-days: 7
 
-  # ── Architecture matrix (build validation, no pre-built packages yet) ───────
-  # These jobs validate that the build system is correctly parameterized on ARCH
-  # and that configs exist. They will be promoted to full builds once arm64/
-  # riscv64 configs are authored (see configs/<arch>/README).
   validate-arch-configs:
     name: "config / ${{ matrix.arch }}"
     runs-on: ubuntu-latest
@@ -118,18 +113,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check config placeholder exists
+      - name: Check config status
         run: |
           if [[ -f "configs/${{ matrix.arch }}/config" ]]; then
-            echo "Config found for ${{ matrix.arch }}"
+            echo "Config present for ${{ matrix.arch }}"
           else
             echo "No config yet for ${{ matrix.arch }} — see configs/${{ matrix.arch }}/README"
-            echo "This is expected until the config is authored."
           fi
 
-  # ── Shell linting ────────────────────────────────────────────────────────────
   shellcheck:
-    name: "shellcheck"
+    name: shellcheck
     runs-on: ubuntu-latest
 
     steps:
@@ -138,7 +131,7 @@ jobs:
       - name: Install shellcheck
         run: sudo apt-get install -y shellcheck
 
-      - name: Lint scripts
+      - name: Lint
         run: |
-          find scripts/ -name '*.sh' -print0 \
+          find scripts/ packaging/ -name '*.sh' -print0 \
             | xargs -0 shellcheck --severity=warning

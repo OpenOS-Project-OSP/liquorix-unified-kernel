@@ -13,19 +13,18 @@ build_deb() {
 
     log INFO "Building .deb for ${distro}/${release} (jobs=${procs}, build=${build_num})"
 
-    local image="liquorix-build-${distro}-${release}"
-    local pkg_dir="${REPO_ROOT}/packaging/debian"
+    # Image tag format matches damentz/liquorix-package: liquorix_<arch>/<distro>/<release>
+    local docker_arch="amd64"
+    [[ "$arch" == "arm64"   ]] && docker_arch="arm64v8"
+    [[ "$arch" == "riscv64" ]] && docker_arch="riscv64"
+
+    local image="liquorix_${docker_arch}/${distro}/${release}"
     local out_dir="${REPO_ROOT}/artifacts/debian/${release}"
     mkdir -p "$out_dir"
 
-    # Bootstrap image if not present
     if ! docker image inspect "$image" &>/dev/null; then
-        log INFO "Bootstrapping Docker image ${image}"
-        docker build \
-            --build-arg DISTRO="$distro" \
-            --build-arg RELEASE="$release" \
-            -t "$image" \
-            "${REPO_ROOT}/packaging/debian"
+        log WARN "Docker image ${image} not found. Run: make bootstrap-${distro}"
+        exit 1
     fi
 
     docker run --rm \
@@ -33,7 +32,9 @@ build_deb() {
         -v "${out_dir}:/artifacts" \
         -e PROCS="$procs" \
         -e BUILD="$build_num" \
-        -e ARCH="$ARCH" \
+        -e ARCH="$docker_arch" \
+        -e DISTRO="$distro" \
+        -e RELEASE="$release" \
         "$image" \
         /build/packaging/debian/build-inside.sh
 
