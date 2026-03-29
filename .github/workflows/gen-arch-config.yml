@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # ratchet:actions/checkout@v4
         env:
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -46,7 +46,7 @@ jobs:
             echo "riscv64 toolchain not available — config generation will still work, prepare step will be skipped"
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # ratchet:docker/setup-qemu-action@v3
         with:
           platforms: arm64,riscv64
 
@@ -175,7 +175,7 @@ jobs:
           cp "linux-${MAJOR}/.config" "output/config-${{ inputs.arch }}-${{ inputs.kernel_version }}"
 
       - name: Upload generated config
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # ratchet:actions/upload-artifact@v4
         with:
           name: liquorix-config-${{ inputs.arch }}-${{ inputs.kernel_version }}
           path: output/
