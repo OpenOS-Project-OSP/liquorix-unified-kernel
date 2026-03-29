@@ -105,6 +105,10 @@ jobs:
             riscv64) CROSS="riscv64-linux-gnu-" ;;
           esac
           cd "linux-${MAJOR}"
+          if [ ! -d "arch/${ARCH_ARG}" ]; then
+            echo "Error: Architecture directory 'arch/${ARCH_ARG}' does not exist."
+            exit 1
+          fi
           make ARCH="${ARCH_ARG}" CROSS_COMPILE="${CROSS}" defconfig
 
       - name: Apply Liquorix tuning
