@@ -45,7 +45,23 @@ jobs:
       - name: Bootstrap
         run: ./scripts/bootstrap.sh debian ${{ matrix.distro }}
 
+      - name: Resolve upstream branch
+        id: upstream
+        run: |
+          branch=$(git ls-remote --heads https://github.com/damentz/liquorix-package \
+            | grep -oP '\d+\.\d+/master' | sort -V | tail -1)
+          echo "branch=${branch}" >> "$GITHUB_OUTPUT"
+          echo "Upstream branch: ${branch}"
+
+      - name: Restore kernel source cache
+        id: cache-kernel
+        uses: actions/cache@v4
+        with:
+          path: .upstream-cache/linux-liquorix_*.orig.tar.xz
+          key: kernel-src-${{ steps.upstream.outputs.branch }}
+
       - name: Download kernel source
+        if: steps.cache-kernel.outputs.cache-hit != 'true'
         run: |
           # common_bootstrap.sh downloads the kernel source tarball from kernel.org
           # if it is not already present in the upstream cache directory.
@@ -133,7 +149,22 @@ jobs:
       - name: Bootstrap
         run: ./scripts/bootstrap.sh fedora
 
+      - name: Resolve upstream branch
+        id: upstream
+        run: |
+          branch=$(git ls-remote --heads https://github.com/damentz/liquorix-package \
+            | grep -oP '\d+\.\d+/master' | sort -V | tail -1)
+          echo "branch=${branch}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore kernel source cache
+        id: cache-kernel
+        uses: actions/cache@v4
+        with:
+          path: .upstream-cache/linux-liquorix_*.orig.tar.xz
+          key: kernel-src-${{ steps.upstream.outputs.branch }}
+
       - name: Download kernel source
+        if: steps.cache-kernel.outputs.cache-hit != 'true'
         run: |
           # Fedora container_build-binary.sh copies the debian kernel source
           # tarball from /liquorix-package. Download it on the host first.
