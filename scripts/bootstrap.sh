@@ -98,9 +98,19 @@ for distro in "${DISTROS[@]}"; do
     upstream_dirs_needed["$(upstream_dir "$distro")"]=1
 done
 
-# Fetch upstream scripts once per unique upstream dir
+# Fetch upstream scripts once per unique upstream dir.
+# env.sh must exist before any container_*.sh script is invoked — it is
+# sourced at the top of every container script for version/path variables.
 for udir in "${!upstream_dirs_needed[@]}"; do
     fetch_upstream_scripts "$udir"
+done
+
+# Verify env.sh was synced for each requested distro
+for distro in "${DISTROS[@]}"; do
+    local_dir="${REPO_ROOT}/packaging/$(upstream_dir "$distro")"
+    if [[ ! -f "${local_dir}/env.sh" ]]; then
+        log WARN "env.sh missing in ${local_dir} — upstream sync may have failed"
+    fi
 done
 
 # Build Docker images

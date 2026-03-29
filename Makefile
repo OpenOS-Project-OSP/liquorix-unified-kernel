@@ -20,9 +20,10 @@
 NPROC  := $(shell nproc 2>/dev/null || echo 4)
 PROCS  := $(shell echo $$(( $(NPROC) / 2 > 2 ? $(NPROC) / 2 : 2 )))
 BUILD  := 1
-DISTRO :=
-RELEASE :=
-ARCH   := $(shell uname -m | sed 's/aarch64/arm64/')
+DISTRO         :=
+RELEASE        :=
+ARCH           := $(shell uname -m | sed 's/aarch64/arm64/')
+FEDORA_RELEASE := 42
 
 SCRIPTS := scripts
 
@@ -45,8 +46,9 @@ help: ## Show available targets
 	@printf "  %-18s %s\n" "PROCS=$(PROCS)"  "parallel jobs (nproc/2, min 2)"
 	@printf "  %-18s %s\n" "BUILD=$(BUILD)"  "build number"
 	@printf "  %-18s %s\n" "ARCH=$(ARCH)"    "target architecture"
-	@printf "  %-18s %s\n" "RELEASE="        "release codename (Debian/Ubuntu)"
-	@printf "  %-18s %s\n" "KERNEL_VERSION=" "kernel version (Gentoo)"
+	@printf "  %-18s %s\n" "RELEASE="           "release codename (Debian/Ubuntu)"
+	@printf "  %-18s %s\n" "FEDORA_RELEASE=42"  "Fedora release number"
+	@printf "  %-18s %s\n" "KERNEL_VERSION="    "kernel version (Gentoo)"
 	@echo ""
 	@echo "Targets:"
 	@grep -E '^[a-z][a-z-]+:.*##' $(MAKEFILE_LIST) | \
@@ -70,8 +72,8 @@ build-ubuntu: ## Build .deb packages for Ubuntu (needs RELEASE=<codename>, e.g. 
 build-arch: ## Build Arch Linux .pkg.tar.zst
 	$(SCRIPTS)/build.sh --distro arch --arch $(ARCH) --jobs $(PROCS)
 
-build-fedora: ## Build Fedora RPM packages
-	$(SCRIPTS)/build.sh --distro fedora --arch $(ARCH) --jobs $(PROCS) --build $(BUILD)
+build-fedora: ## Build Fedora RPM packages (FEDORA_RELEASE=42)
+	FEDORA_RELEASE=$(FEDORA_RELEASE) $(SCRIPTS)/build.sh --distro fedora --arch $(ARCH) --jobs $(PROCS) --build $(BUILD)
 
 build-gentoo: ## Build Gentoo kernel with genkernel (needs KERNEL_VERSION=x.y.z)
 	$(if $(KERNEL_VERSION),,$(error KERNEL_VERSION is required, e.g. make $@ KERNEL_VERSION=6.12.1))

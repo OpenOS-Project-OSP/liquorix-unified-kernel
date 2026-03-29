@@ -38,7 +38,25 @@ jobs:
       - name: Bootstrap
         run: ./scripts/bootstrap.sh ${{ matrix.distro }}
 
-      - name: Build packages
+      # Source build must run before binary build.
+      # It produces .dsc + .orig.tar.xz in artifacts/debian/<release>/
+      # which the binary build container consumes.
+      - name: Build source package
+        run: |
+          docker run --rm \
+            --net=host \
+            --tmpfs /build:exec \
+            --ulimit nofile=524288:524288 \
+            -v "$PWD:/liquorix-package:ro" \
+            -v "$PWD/artifacts/debian/${{ matrix.release }}:/liquorix-package/artifacts/debian/${{ matrix.release }}" \
+            liquorix_amd64/debian/bookworm \
+            /liquorix-package/packaging/debian/build-source-inside.sh
+        env:
+          DISTRO: ${{ matrix.distro }}
+          RELEASE: ${{ matrix.release }}
+          BUILD: "1"
+
+      - name: Build binary packages
         run: |
           make build-${{ matrix.distro }} \
             RELEASE=${{ matrix.release }} \
@@ -93,7 +111,11 @@ jobs:
         run: ./scripts/bootstrap.sh fedora
 
       - name: Build RPMs
-        run: make build-fedora ARCH=x86_64 FEDORA_RELEASE=${{ matrix.release }} PROCS=2
+        run: |
+          make build-fedora \
+            ARCH=x86_64 \
+            FEDORA_RELEASE=${{ matrix.release }} \
+            PROCS=2
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

@@ -33,17 +33,15 @@ fetch_upstream_scripts() {
     local dst_dir="${REPO_ROOT}/packaging/${distro}"
 
     log INFO "Syncing ${distro} build scripts from upstream"
-    # Copy Dockerfile and container scripts; skip host-side docker_*.sh wrappers
-    # (we have our own in scripts/lib/build-*.sh)
-    rsync -a --include='Dockerfile' \
-              --include='container_*.sh' \
+    # Copy container scripts and env; skip host-side docker_*.sh wrappers
+    # (we have our own in scripts/lib/build-*.sh and scripts/bootstrap.sh)
+    rsync -a --include='container_*.sh' \
               --include='common_bootstrap.sh' \
               --include='env.sh' \
-              --include='*.spec' \
               --exclude='*' \
               "${src_dir}/" "${dst_dir}/"
 
-    # Also sync the shared lib.sh
+    # Also sync the shared lib.sh (logging, require_var, image_name helpers)
     cp -f "${cache_dir}/scripts/lib.sh" "${REPO_ROOT}/packaging/lib.sh"
 
     log INFO "Upstream scripts synced to packaging/${distro}/"
