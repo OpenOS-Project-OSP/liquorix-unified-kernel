@@ -43,6 +43,16 @@ jobs:
       - name: Bootstrap
         run: ./scripts/bootstrap.sh ${{ matrix.distro }}
 
+      - name: Download kernel source
+        run: |
+          # common_bootstrap.sh downloads the kernel source tarball from kernel.org
+          # if it is not already present in the upstream cache directory.
+          docker run --rm \
+            --net=host \
+            -v "$PWD/.upstream-cache:/liquorix-package" \
+            liquorix_amd64/debian/bookworm \
+            /liquorix-package/scripts/debian/common_bootstrap.sh
+
       - name: Build source package
         run: |
           mkdir -p "artifacts/debian/${{ matrix.release }}"
