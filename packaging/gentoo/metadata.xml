@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+    <longdescription>
+        The Liquorix kernel is built from the Zen kernel sources and tuned
+        for desktop responsiveness and low latency. It uses the BORE scheduler,
+        full preemption, 1000 Hz timer, and other settings optimised for
+        interactive workloads and gaming.
+    </longdescription>
+    <upstream>
+        <remote-id type="github">damentz/liquorix-package</remote-id>
+        <bugs-to>https://github.com/Interested-Deving-1896/liquorix-unified-kernel/issues</bugs-to>
+    </upstream>
+</pkgmetadata>

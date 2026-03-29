@@ -23,7 +23,8 @@ BUILD  := 1
 DISTRO         :=
 RELEASE        :=
 ARCH           := $(shell uname -m | sed 's/aarch64/arm64/')
-FEDORA_RELEASE := 42
+FEDORA_RELEASE   := 42
+OPENSUSE_RELEASE := tumbleweed
 
 SCRIPTS := scripts
 
@@ -47,7 +48,8 @@ help: ## Show available targets
 	@printf "  %-18s %s\n" "BUILD=$(BUILD)"  "build number"
 	@printf "  %-18s %s\n" "ARCH=$(ARCH)"    "target architecture"
 	@printf "  %-18s %s\n" "RELEASE="           "release codename (Debian/Ubuntu)"
-	@printf "  %-18s %s\n" "FEDORA_RELEASE=42"  "Fedora release number"
+	@printf "  %-18s %s\n" "FEDORA_RELEASE=42"          "Fedora release number"
+	@printf "  %-18s %s\n" "OPENSUSE_RELEASE=tumbleweed" "openSUSE release"
 	@printf "  %-18s %s\n" "KERNEL_VERSION="    "kernel version (Gentoo)"
 	@echo ""
 	@echo "Targets:"
@@ -75,6 +77,9 @@ build-arch: ## Build Arch Linux .pkg.tar.zst
 build-fedora: ## Build Fedora RPM packages (FEDORA_RELEASE=42)
 	FEDORA_RELEASE=$(FEDORA_RELEASE) $(SCRIPTS)/build.sh --distro fedora --arch $(ARCH) --jobs $(PROCS) --build $(BUILD)
 
+build-opensuse: ## Build openSUSE RPM packages (OPENSUSE_RELEASE=tumbleweed)
+	OPENSUSE_RELEASE=$(OPENSUSE_RELEASE) $(SCRIPTS)/build.sh --distro opensuse --arch $(ARCH) --jobs $(PROCS) --build $(BUILD)
+
 build-gentoo: ## Build Gentoo kernel with genkernel (needs KERNEL_VERSION=x.y.z)
 	$(if $(KERNEL_VERSION),,$(error KERNEL_VERSION is required, e.g. make $@ KERNEL_VERSION=6.12.1))
 	KERNEL_VERSION=$(KERNEL_VERSION) $(SCRIPTS)/build.sh --distro gentoo --arch $(ARCH) --jobs $(PROCS)
@@ -97,6 +102,9 @@ bootstrap-arch: ## Fetch upstream scripts and build Arch Linux Docker image
 
 bootstrap-fedora: ## Fetch upstream scripts and build Fedora Docker images
 	$(SCRIPTS)/bootstrap.sh fedora
+
+bootstrap-opensuse: ## Build openSUSE Docker images
+	$(SCRIPTS)/bootstrap.sh opensuse
 
 bootstrap-all: ## Bootstrap all distros
 	$(SCRIPTS)/bootstrap.sh

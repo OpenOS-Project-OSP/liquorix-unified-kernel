@@ -10,8 +10,18 @@
 # Environment variables:
 #   KERNEL_VERSION  Required on Gentoo (e.g. KERNEL_VERSION=6.12.1)
 #
-# Supported distros:  Debian, Ubuntu, Arch Linux, Gentoo, Fedora
-# Supported arches:   x86_64 (pre-built); arm64, riscv64 (build from source)
+# Supported distros:
+#   Debian, Ubuntu and all derivatives (apt-based)
+#   Arch Linux and all derivatives (pacman-based)
+#   Fedora
+#   RHEL, AlmaLinux, Rocky, Oracle, CentOS Stream, Nobara, Bazzite, Ultramarine
+#   openSUSE Tumbleweed and Leap
+#   Gentoo (source build via genkernel)
+#   Alpine (detected but not supported — musl libc incompatibility)
+#
+# Supported arches:
+#   x86_64 (pre-built packages)
+#   arm64, riscv64 (build from source — configs not yet authored)
 
 set -euo pipefail
 
@@ -29,8 +39,14 @@ source "${SCRIPT_DIR}/lib/install-ubuntu.sh"
 source "${SCRIPT_DIR}/lib/install-arch.sh"
 # shellcheck source=lib/install-fedora.sh
 source "${SCRIPT_DIR}/lib/install-fedora.sh"
+# shellcheck source=lib/install-rhel.sh
+source "${SCRIPT_DIR}/lib/install-rhel.sh"
+# shellcheck source=lib/install-opensuse.sh
+source "${SCRIPT_DIR}/lib/install-opensuse.sh"
 # shellcheck source=lib/install-gentoo.sh
 source "${SCRIPT_DIR}/lib/install-gentoo.sh"
+# shellcheck source=lib/install-alpine.sh
+source "${SCRIPT_DIR}/lib/install-alpine.sh"
 
 # ── Guards ────────────────────────────────────────────────────────────────────
 
@@ -57,14 +73,18 @@ export DEBIAN_FRONTEND=noninteractive
 export NEEDRESTART_SUSPEND='*'
 
 case "$DISTRO" in
-    debian)  install_debian  "$ARCH" ;;
-    ubuntu)  install_ubuntu  "$ARCH" ;;
-    arch)    install_arch    "$ARCH" ;;
-    gentoo)  install_gentoo  "$ARCH" ;;
-    fedora)  install_fedora  "$ARCH" ;;
+    debian)   install_debian   "$ARCH" ;;
+    ubuntu)   install_ubuntu   "$ARCH" ;;
+    arch)     install_arch     "$ARCH" ;;
+    fedora)   install_fedora   "$ARCH" ;;
+    rhel)     install_rhel     "$ARCH" ;;
+    opensuse) install_opensuse "$ARCH" ;;
+    gentoo)   install_gentoo   "$ARCH" ;;
+    alpine)   install_alpine   "$ARCH" ;;
     *)
         log ERROR "Unsupported distribution: ${DISTRO}"
-        log WARN  "Supported: Debian, Ubuntu, Arch Linux, Gentoo, Fedora"
+        log WARN  "Supported: Debian/Ubuntu family, Arch family, Fedora, RHEL family, openSUSE, Gentoo"
+        log WARN  "See docs/adding-distro.md to contribute support for your distro"
         exit 1
         ;;
 esac

@@ -27,7 +27,7 @@ source "${SCRIPT_DIR}/lib/upstream.sh"
 
 export REPO_ROOT
 
-ALL_DISTROS=(debian ubuntu arch fedora)
+ALL_DISTROS=(debian ubuntu arch fedora opensuse)
 
 # Map our distro names to upstream script directory names
 upstream_dir() {
@@ -35,6 +35,7 @@ upstream_dir() {
         debian|ubuntu) echo "debian" ;;
         arch)          echo "archlinux" ;;
         fedora)        echo "fedora" ;;
+        opensuse)      echo "" ;;  # no upstream scripts — self-contained
     esac
 }
 
@@ -61,6 +62,10 @@ docker_base_args() {
                 echo "amd64 fedora $release"
             done
             ;;
+        opensuse)
+            echo "amd64 opensuse tumbleweed"
+            echo "amd64 opensuse leap"
+            ;;
     esac
 }
 
@@ -73,6 +78,7 @@ build_docker_image() {
         debian|ubuntu) dockerfile="${REPO_ROOT}/packaging/debian/Dockerfile" ;;
         archlinux)     dockerfile="${REPO_ROOT}/packaging/arch/Dockerfile" ;;
         fedora)        dockerfile="${REPO_ROOT}/packaging/fedora/Dockerfile" ;;
+        opensuse)      dockerfile="${REPO_ROOT}/packaging/opensuse/Dockerfile" ;;
     esac
 
     log INFO "Building Docker image: ${image_tag}"
@@ -92,10 +98,13 @@ build_docker_image() {
 
 DISTROS=("${@:-${ALL_DISTROS[@]}}")
 
-# Resolve which upstream script dirs we need
+# Resolve which upstream script dirs we need.
+# Distros with an empty upstream_dir (e.g. opensuse) are self-contained
+# and do not require a sync from damentz/liquorix-package.
 declare -A upstream_dirs_needed
 for distro in "${DISTROS[@]}"; do
-    upstream_dirs_needed["$(upstream_dir "$distro")"]=1
+    udir=$(upstream_dir "$distro")
+    [[ -n "$udir" ]] && upstream_dirs_needed["$udir"]=1
 done
 
 # Fetch upstream scripts once per unique upstream dir.
@@ -105,9 +114,11 @@ for udir in "${!upstream_dirs_needed[@]}"; do
     fetch_upstream_scripts "$udir"
 done
 
-# Verify env.sh was synced for each requested distro
+# Verify env.sh was synced for distros that require it
 for distro in "${DISTROS[@]}"; do
-    local_dir="${REPO_ROOT}/packaging/$(upstream_dir "$distro")"
+    udir=$(upstream_dir "$distro")
+    [[ -z "$udir" ]] && continue
+    local_dir="${REPO_ROOT}/packaging/${udir}"
     if [[ ! -f "${local_dir}/env.sh" ]]; then
         log WARN "env.sh missing in ${local_dir} — upstream sync may have failed"
     fi

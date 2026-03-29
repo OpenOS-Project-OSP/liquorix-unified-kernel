@@ -1,0 +1,171 @@
+name: Generate architecture configs
+
+# Run manually to produce a candidate kernel config for a new architecture.
+# The output is uploaded as an artifact for review before being committed
+# to configs/<arch>/config.
+#
+# This does NOT commit anything automatically — a human must review the
+# generated config and open a PR following docs/adding-arch.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      arch:
+        description: "Target architecture"
+        required: true
+        default: "arm64"
+        type: choice
+        options:
+          - arm64
+          - riscv64
+      kernel_version:
+        description: "Kernel version (e.g. 6.12.1)"
+        required: true
+        default: "6.12.1"
+
+jobs:
+  generate-config:
+    name: "Generate config / ${{ inputs.arch }}"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cross-compilation toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu \
+            gcc-riscv64-linux-gnu \
+            bison flex libelf-dev libssl-dev \
+            bc make cpio xz-utils
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64,riscv64
+
+      - name: Derive kernel major version
+        id: ver
+        run: |
+          MAJOR=$(echo "${{ inputs.kernel_version }}" | grep -oP '^\d+\.\d+')
+          echo "major=${MAJOR}" >> "$GITHUB_OUTPUT"
+
+      - name: Download kernel source
+        run: |
+          MAJOR=${{ steps.ver.outputs.major }}
+          wget -q "https://cdn.kernel.org/pub/linux/kernel/v${MAJOR%%.*}.x/linux-${MAJOR}.tar.xz"
+          tar -xf "linux-${MAJOR}.tar.xz"
+
+      - name: Download Liquorix patch
+        run: |
+          MAJOR=${{ steps.ver.outputs.major }}
+          # Fetch latest lqx release tag for this major version
+          LQX_REL=$(curl -s "https://api.github.com/repos/damentz/liquorix-package/branches" \
+            | grep -oP "\"name\":\s*\"${MAJOR}-\K[^\"]+(?=\")" | sort -V | tail -1)
+          echo "LQX_REL=${LQX_REL}" >> "$GITHUB_ENV"
+          wget -q "https://github.com/damentz/liquorix-package/archive/${MAJOR}-${LQX_REL}.tar.gz"
+          tar -xf "${MAJOR}-${LQX_REL}.tar.gz"
+
+      - name: Apply Liquorix patches
+        run: |
+          MAJOR=${{ steps.ver.outputs.major }}
+          PATCH_DIR="liquorix-package-${MAJOR}-${LQX_REL}/linux-liquorix/debian/patches"
+          cd "linux-${MAJOR}"
+          grep -P '^(zen|lqx)/' "../${PATCH_DIR}/series" | while IFS= read -r p; do
+            patch -Np1 -i "../${PATCH_DIR}/${p}"
+          done
+
+      - name: Generate defconfig
+        run: |
+          MAJOR=${{ steps.ver.outputs.major }}
+          ARCH_ARG=${{ inputs.arch }}
+          CROSS=""
+          case "$ARCH_ARG" in
+            arm64)   CROSS="aarch64-linux-gnu-" ;;
+            riscv64) CROSS="riscv64-linux-gnu-" ;;
+          esac
+          cd "linux-${MAJOR}"
+          make ARCH="${ARCH_ARG}" CROSS_COMPILE="${CROSS}" defconfig
+
+      - name: Apply Liquorix tuning
+        run: |
+          MAJOR=${{ steps.ver.outputs.major }}
+          cd "linux-${MAJOR}"
+
+          # Scheduler
+          scripts/config --enable  CONFIG_SCHED_BORE        2>/dev/null || true
+          scripts/config --disable CONFIG_SCHED_ALT         2>/dev/null || true
+
+          # Preemption — full preemption for desktop responsiveness
+          scripts/config --enable  CONFIG_PREEMPT
+          scripts/config --disable CONFIG_PREEMPT_VOLUNTARY
+          scripts/config --disable CONFIG_PREEMPT_NONE
+
+          # Timer frequency — 1000 Hz
+          scripts/config --enable  CONFIG_HZ_1000
+          scripts/config --disable CONFIG_HZ_250
+          scripts/config --set-val CONFIG_HZ 1000
+
+          # I/O schedulers
+          scripts/config --enable CONFIG_MQ_IOSCHED_DEADLINE
+          scripts/config --enable CONFIG_MQ_IOSCHED_KYBER
+
+          # Memory
+          scripts/config --enable CONFIG_ZSWAP
+          scripts/config --enable CONFIG_ZRAM
+
+          # Networking
+          scripts/config --enable CONFIG_TCP_CONG_BBR        2>/dev/null || true
+          scripts/config --enable CONFIG_NET_SCH_FQ          2>/dev/null || true
+          scripts/config --enable CONFIG_NET_SCH_CAKE        2>/dev/null || true
+
+          # Futex
+          scripts/config --enable CONFIG_FUTEX
+          scripts/config --enable CONFIG_FUTEX_PI            2>/dev/null || true
+
+          # Resolve dependencies
+          ARCH_ARG=${{ inputs.arch }}
+          CROSS=""
+          case "$ARCH_ARG" in
+            arm64)   CROSS="aarch64-linux-gnu-" ;;
+            riscv64) CROSS="riscv64-linux-gnu-" ;;
+          esac
+          make ARCH="${ARCH_ARG}" CROSS_COMPILE="${CROSS}" olddefconfig
+
+      - name: Validate config compiles (headers only)
+        run: |
+          MAJOR=${{ steps.ver.outputs.major }}
+          ARCH_ARG=${{ inputs.arch }}
+          CROSS=""
+          case "$ARCH_ARG" in
+            arm64)   CROSS="aarch64-linux-gnu-" ;;
+            riscv64) CROSS="riscv64-linux-gnu-" ;;
+          esac
+          cd "linux-${MAJOR}"
+          make ARCH="${ARCH_ARG}" CROSS_COMPILE="${CROSS}" -j"$(nproc)" prepare
+
+      - name: Copy config to output
+        run: |
+          MAJOR=${{ steps.ver.outputs.major }}
+          mkdir -p output
+          cp "linux-${MAJOR}/.config" "output/config-${{ inputs.arch }}-${{ inputs.kernel_version }}"
+
+      - name: Upload generated config
+        uses: actions/upload-artifact@v4
+        with:
+          name: liquorix-config-${{ inputs.arch }}-${{ inputs.kernel_version }}
+          path: output/
+          retention-days: 30
+
+      - name: Next steps
+        run: |
+          echo ""
+          echo "Config generated successfully."
+          echo ""
+          echo "To use this config:"
+          echo "  1. Download the artifact from this workflow run"
+          echo "  2. Review it following docs/adding-arch.md"
+          echo "  3. Copy it to configs/${{ inputs.arch }}/config"
+          echo "  4. Open a pull request"
+          echo ""

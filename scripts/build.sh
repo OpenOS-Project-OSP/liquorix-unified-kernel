@@ -35,6 +35,8 @@ source "${SCRIPT_DIR}/lib/build-deb.sh"
 source "${SCRIPT_DIR}/lib/build-arch.sh"
 # shellcheck source=lib/build-rpm.sh
 source "${SCRIPT_DIR}/lib/build-rpm.sh"
+# shellcheck source=lib/build-opensuse.sh
+source "${SCRIPT_DIR}/lib/build-opensuse.sh"
 # shellcheck source=lib/build-gentoo.sh
 source "${SCRIPT_DIR}/lib/build-gentoo.sh"
 
@@ -93,15 +95,18 @@ case "$DISTRO" in
     arch)
         build_arch "$PROCS"
         ;;
-    fedora)
+    fedora|rhel)
         build_rpm "$PROCS" "$BUILD"
+        ;;
+    opensuse)
+        build_opensuse "$PROCS" "$BUILD"
         ;;
     gentoo)
         build_gentoo "$PROCS"
         ;;
     *)
         log ERROR "Unknown distro: ${DISTRO}"
-        log WARN  "Supported: debian, ubuntu, arch, fedora, gentoo"
+        log WARN  "Supported: debian, ubuntu, arch, fedora, rhel, opensuse, gentoo"
         exit 1
         ;;
 esac
