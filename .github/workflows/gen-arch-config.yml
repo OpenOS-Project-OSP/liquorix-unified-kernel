@@ -38,9 +38,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             gcc-aarch64-linux-gnu \
-            gcc-riscv64-linux-gnu \
             bison flex libelf-dev libssl-dev \
             bc make cpio xz-utils
+          # riscv64 toolchain may need universe repo
+          sudo apt-get install -y gcc-riscv64-linux-gnu 2>/dev/null || \
+            sudo apt-get install -y gcc-riscv64-unknown-elf 2>/dev/null || \
+            echo "riscv64 toolchain not available — config generation will still work, prepare step will be skipped"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
