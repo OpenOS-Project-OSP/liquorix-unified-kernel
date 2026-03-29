@@ -32,7 +32,7 @@ build_arch() {
         --net=host \
         --ulimit nofile=524288:524288 \
         $(gpg_docker_flags /home/builder) \
-        -v "${cache_dir}:/liquorix-package:ro" \
+        -v "${cache_dir}:/liquorix-package" \
         -v "${out_dir}:/liquorix-package/artifacts/archlinux/latest" \
         "$image" \
         /liquorix-package/scripts/archlinux/container_build-binary.sh \
