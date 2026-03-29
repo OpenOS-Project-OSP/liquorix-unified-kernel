@@ -101,6 +101,7 @@ jobs:
         run: |
           docker run --rm \
             --net=host \
+            --user root \
             -v "$PWD/.upstream-cache:/liquorix-package" \
             liquorix_amd64/archlinux/latest \
             /liquorix-package/scripts/archlinux/common_bootstrap.sh
