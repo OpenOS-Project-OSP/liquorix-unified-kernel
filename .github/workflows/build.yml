@@ -50,7 +50,7 @@ jobs:
             --net=host \
             --tmpfs /build:exec \
             --ulimit nofile=524288:524288 \
-            -v "$PWD/.upstream-cache:/liquorix-package:ro" \
+            -v "$PWD/.upstream-cache:/liquorix-package" \
             -v "$PWD/artifacts/debian/${{ matrix.release }}:/liquorix-package/artifacts/debian/${{ matrix.release }}" \
             liquorix_amd64/debian/bookworm \
             /liquorix-package/scripts/debian/container_build-source.sh \
