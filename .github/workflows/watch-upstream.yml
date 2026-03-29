@@ -19,6 +19,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         with:
           fetch-depth: 0
 
@@ -77,6 +79,15 @@ jobs:
             echo "Update available: ${CURRENT} -> ${LATEST}"
             echo "needed=true"  >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Ensure upstream-update label exists
+        if: steps.check.outputs.needed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "upstream-update" \
+            --description "Automated upstream version bump" \
+            --color "0075ca" 2>/dev/null || true
 
       - name: Create update branch and PR
         if: steps.check.outputs.needed == 'true'

@@ -7,7 +7,6 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
-# Cancel in-flight runs for the same branch on new pushes
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -25,22 +24,25 @@ jobs:
           - distro: debian
             release: bookworm
           - distro: ubuntu
-            release: noble      # 24.04 LTS
+            release: noble
           - distro: ubuntu
             release: questing
 
     steps:
       - uses: actions/checkout@v4
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+      # Bootstrap fetches the upstream cache AND builds Docker images.
+      # Both the source-build and binary-build steps depend on this.
       - name: Bootstrap
         run: ./scripts/bootstrap.sh ${{ matrix.distro }}
 
-      # Source build must run before binary build.
-      # Both stages mount .upstream-cache as /liquorix-package so the upstream
-      # container scripts find the expected damentz repo layout.
       - name: Build source package
         run: |
           mkdir -p "artifacts/debian/${{ matrix.release }}"
@@ -74,9 +76,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
       - name: Bootstrap
         run: ./scripts/bootstrap.sh arch
@@ -101,9 +107,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
       - name: Bootstrap
         run: ./scripts/bootstrap.sh fedora
@@ -111,8 +121,8 @@ jobs:
       - name: Build RPMs
         run: |
           make build-fedora \
-            ARCH=x86_64 \
             FEDORA_RELEASE=${{ matrix.release }} \
+            ARCH=x86_64 \
             PROCS=2
 
       - name: Upload artifacts
@@ -132,6 +142,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
       - name: Check config status
         run: |
@@ -147,6 +159,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
       - name: Install shellcheck
         run: sudo apt-get install -y shellcheck
