@@ -15,7 +15,8 @@
 #   DISTRO         distro name — required for per-release targets
 #   RELEASE        release codename — required for Debian/Ubuntu targets
 #   ARCH           target architecture: x86_64|arm64|riscv64 (default: host)
-#   KERNEL_VERSION kernel version for Gentoo builds (e.g. 6.12.1)
+#   MLEVEL         x86-64 microarch level: v1|v2|v3|v4 (default: auto-detect)
+#   KERNEL_VERSION kernel version for Gentoo/generic builds (e.g. 6.12.1)
 #   ENABLE_BDFS    set to 1 to build + install the btrfs_dwarfs module
 #   BDFS_SRC       path to btrfs-dwarfs-framework checkout (auto-cloned if unset)
 
@@ -29,6 +30,7 @@ FEDORA_RELEASE   := 42
 OPENSUSE_RELEASE := tumbleweed
 ENABLE_BDFS      := 0
 BDFS_SRC         :=
+MLEVEL           :=
 
 SCRIPTS := scripts
 
@@ -38,7 +40,7 @@ require-release = \
 
 .PHONY: help \
 	install \
-	build-debian build-ubuntu build-arch build-fedora build-gentoo build \
+	build-debian build-ubuntu build-arch build-fedora build-gentoo build-generic build \
 	build-bdfs \
 	bootstrap-debian bootstrap-ubuntu bootstrap-arch bootstrap-fedora \
 	clean
@@ -55,7 +57,8 @@ help: ## Show available targets
 	@printf "  %-18s %s\n" "RELEASE="           "release codename (Debian/Ubuntu)"
 	@printf "  %-18s %s\n" "FEDORA_RELEASE=42"          "Fedora release number"
 	@printf "  %-18s %s\n" "OPENSUSE_RELEASE=tumbleweed" "openSUSE release"
-	@printf "  %-18s %s\n" "KERNEL_VERSION="    "kernel version (Gentoo)"
+	@printf "  %-18s %s\n" "MLEVEL="            "x86-64 microarch level: v1|v2|v3|v4 (auto-detect)"
+	@printf "  %-18s %s\n" "KERNEL_VERSION="    "kernel version (Gentoo/generic)"
 	@printf "  %-18s %s\n" "ENABLE_BDFS=0"      "build + install btrfs_dwarfs module"
 	@printf "  %-18s %s\n" "BDFS_SRC="          "path to btrfs-dwarfs-framework checkout"
 	@echo ""
@@ -70,39 +73,48 @@ install: ## Install Liquorix on the current system (auto-detects distro)
 
 # ── Build — per distro ────────────────────────────────────────────────────────
 
-# _BDFS_FLAGS is appended to every build.sh invocation when ENABLE_BDFS=1.
-_BDFS_FLAGS = $(if $(filter 1,$(ENABLE_BDFS)),--bdfs $(if $(BDFS_SRC),BDFS_SRC=$(BDFS_SRC),),)
+# _MLEVEL_FLAG passes --mlevel only when MLEVEL is explicitly set (otherwise auto-detect runs).
+_MLEVEL_FLAG = $(if $(MLEVEL),--mlevel $(MLEVEL),)
+# _BDFS_FLAG is appended when ENABLE_BDFS=1.
+_BDFS_FLAG = $(if $(filter 1,$(ENABLE_BDFS)),--bdfs,)
+# Common env prefix for all build.sh invocations.
+_BUILD_ENV = ENABLE_BDFS=$(ENABLE_BDFS) $(if $(BDFS_SRC),BDFS_SRC=$(BDFS_SRC),) $(if $(MLEVEL),MLEVEL=$(MLEVEL),)
 
 build-debian: ## Build .deb packages (needs RELEASE=<codename>, e.g. trixie)
 	$(if $(RELEASE),,$(error RELEASE is required, e.g. make $@ RELEASE=trixie))
-	ENABLE_BDFS=$(ENABLE_BDFS) $(if $(BDFS_SRC),BDFS_SRC=$(BDFS_SRC),) \
-	  $(SCRIPTS)/build.sh --distro debian --release $(RELEASE) --arch $(ARCH) --jobs $(PROCS) --build $(BUILD) $(if $(filter 1,$(ENABLE_BDFS)),--bdfs,)
+	$(_BUILD_ENV) \
+	  $(SCRIPTS)/build.sh --distro debian --release $(RELEASE) --arch $(ARCH) --jobs $(PROCS) --build $(BUILD) $(_MLEVEL_FLAG) $(_BDFS_FLAG)
 
 build-ubuntu: ## Build .deb packages for Ubuntu (needs RELEASE=<codename>, e.g. noble)
 	$(if $(RELEASE),,$(error RELEASE is required, e.g. make $@ RELEASE=noble))
-	ENABLE_BDFS=$(ENABLE_BDFS) $(if $(BDFS_SRC),BDFS_SRC=$(BDFS_SRC),) \
-	  $(SCRIPTS)/build.sh --distro ubuntu --release $(RELEASE) --arch $(ARCH) --jobs $(PROCS) --build $(BUILD) $(if $(filter 1,$(ENABLE_BDFS)),--bdfs,)
+	$(_BUILD_ENV) \
+	  $(SCRIPTS)/build.sh --distro ubuntu --release $(RELEASE) --arch $(ARCH) --jobs $(PROCS) --build $(BUILD) $(_MLEVEL_FLAG) $(_BDFS_FLAG)
 
 build-arch: ## Build Arch Linux .pkg.tar.zst
-	ENABLE_BDFS=$(ENABLE_BDFS) $(if $(BDFS_SRC),BDFS_SRC=$(BDFS_SRC),) \
-	  $(SCRIPTS)/build.sh --distro arch --arch $(ARCH) --jobs $(PROCS) $(if $(filter 1,$(ENABLE_BDFS)),--bdfs,)
+	$(_BUILD_ENV) \
+	  $(SCRIPTS)/build.sh --distro arch --arch $(ARCH) --jobs $(PROCS) $(_MLEVEL_FLAG) $(_BDFS_FLAG)
 
 build-fedora: ## Build Fedora RPM packages (FEDORA_RELEASE=42)
-	FEDORA_RELEASE=$(FEDORA_RELEASE) ENABLE_BDFS=$(ENABLE_BDFS) $(if $(BDFS_SRC),BDFS_SRC=$(BDFS_SRC),) \
-	  $(SCRIPTS)/build.sh --distro fedora --arch $(ARCH) --jobs $(PROCS) --build $(BUILD) $(if $(filter 1,$(ENABLE_BDFS)),--bdfs,)
+	FEDORA_RELEASE=$(FEDORA_RELEASE) $(_BUILD_ENV) \
+	  $(SCRIPTS)/build.sh --distro fedora --arch $(ARCH) --jobs $(PROCS) --build $(BUILD) $(_MLEVEL_FLAG) $(_BDFS_FLAG)
 
 build-opensuse: ## Build openSUSE RPM packages (OPENSUSE_RELEASE=tumbleweed)
-	OPENSUSE_RELEASE=$(OPENSUSE_RELEASE) ENABLE_BDFS=$(ENABLE_BDFS) $(if $(BDFS_SRC),BDFS_SRC=$(BDFS_SRC),) \
-	  $(SCRIPTS)/build.sh --distro opensuse --arch $(ARCH) --jobs $(PROCS) --build $(BUILD) $(if $(filter 1,$(ENABLE_BDFS)),--bdfs,)
+	OPENSUSE_RELEASE=$(OPENSUSE_RELEASE) $(_BUILD_ENV) \
+	  $(SCRIPTS)/build.sh --distro opensuse --arch $(ARCH) --jobs $(PROCS) --build $(BUILD) $(_MLEVEL_FLAG) $(_BDFS_FLAG)
 
 build-gentoo: ## Build Gentoo kernel with genkernel (needs KERNEL_VERSION=x.y.z)
 	$(if $(KERNEL_VERSION),,$(error KERNEL_VERSION is required, e.g. make $@ KERNEL_VERSION=6.12.1))
-	KERNEL_VERSION=$(KERNEL_VERSION) ENABLE_BDFS=$(ENABLE_BDFS) $(if $(BDFS_SRC),BDFS_SRC=$(BDFS_SRC),) \
-	  $(SCRIPTS)/build.sh --distro gentoo --arch $(ARCH) --jobs $(PROCS) $(if $(filter 1,$(ENABLE_BDFS)),--bdfs,)
+	KERNEL_VERSION=$(KERNEL_VERSION) $(_BUILD_ENV) \
+	  $(SCRIPTS)/build.sh --distro gentoo --arch $(ARCH) --jobs $(PROCS) $(_MLEVEL_FLAG) $(_BDFS_FLAG)
+
+build-generic: ## Build + install via plain make install — no packaging, any distro (needs KERNEL_VERSION=x.y.z)
+	$(if $(KERNEL_VERSION),,$(error KERNEL_VERSION is required, e.g. make $@ KERNEL_VERSION=6.12.1))
+	KERNEL_VERSION=$(KERNEL_VERSION) $(_BUILD_ENV) \
+	  $(SCRIPTS)/build.sh --distro generic --arch $(ARCH) --jobs $(PROCS) $(_MLEVEL_FLAG) $(_BDFS_FLAG)
 
 build: ## Build for a single release (needs DISTRO= and RELEASE= for deb targets)
-	ENABLE_BDFS=$(ENABLE_BDFS) $(if $(BDFS_SRC),BDFS_SRC=$(BDFS_SRC),) \
-	  $(SCRIPTS)/build.sh --distro $(DISTRO) $(if $(RELEASE),--release $(RELEASE),) --arch $(ARCH) --jobs $(PROCS) --build $(BUILD) $(if $(filter 1,$(ENABLE_BDFS)),--bdfs,)
+	$(_BUILD_ENV) \
+	  $(SCRIPTS)/build.sh --distro $(DISTRO) $(if $(RELEASE),--release $(RELEASE),) --arch $(ARCH) --jobs $(PROCS) --build $(BUILD) $(_MLEVEL_FLAG) $(_BDFS_FLAG)
 
 build-bdfs: ## Build only the btrfs_dwarfs module (requires a prior kernel build in SRCDIR)
 	ENABLE_BDFS=1 $(if $(BDFS_SRC),BDFS_SRC=$(BDFS_SRC),) \

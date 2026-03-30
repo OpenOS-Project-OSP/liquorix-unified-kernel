@@ -24,6 +24,7 @@
 #   openSUSE Tumbleweed and Leap
 #   Gentoo (source build via genkernel)
 #   Alpine (detected but not supported — musl libc incompatibility)
+#   Generic (any distro — kernel was installed during build via make install)
 #
 # Supported arches:
 #   x86_64 (pre-built packages)
@@ -58,6 +59,8 @@ source "${SCRIPT_DIR}/lib/install-opensuse.sh"
 source "${SCRIPT_DIR}/lib/install-gentoo.sh"
 # shellcheck source=lib/install-alpine.sh
 source "${SCRIPT_DIR}/lib/install-alpine.sh"
+# shellcheck source=lib/install-generic.sh
+source "${SCRIPT_DIR}/lib/install-generic.sh"
 
 # ── Guards ────────────────────────────────────────────────────────────────────
 
@@ -69,7 +72,20 @@ fi
 # ── Detection ─────────────────────────────────────────────────────────────────
 
 ARCH=$(detect_arch) || {
-    log ERROR "Unsupported architecture: $(uname -m)"
+    raw_arch=$(uname -m)
+    case "$raw_arch" in
+        i386|i486|i586|i686)
+            log ERROR "i386/i686 is not supported."
+            log WARN  "Liquorix and its upstream Zen patch set target 64-bit kernels only."
+            log WARN  "The last Linux kernel with native i386 support was 3.7.10 (2013)."
+            log WARN  "If you need a modern kernel on 32-bit x86 hardware, consider:"
+            log WARN  "  - gray386linux (kernel 3.7.10 + musl): https://github.com/marmolak/gray386linux"
+            log WARN  "  - Debian i386 with a stock kernel (no Liquorix patches)"
+            ;;
+        *)
+            log ERROR "Unsupported architecture: ${raw_arch}"
+            ;;
+    esac
     exit 1
 }
 
@@ -92,9 +108,10 @@ case "$DISTRO" in
     opensuse) install_opensuse "$ARCH" ;;
     gentoo)   install_gentoo   "$ARCH" ;;
     alpine)   install_alpine   "$ARCH" ;;
+    generic)  install_generic  "$ARCH" ;;
     *)
         log ERROR "Unsupported distribution: ${DISTRO}"
-        log WARN  "Supported: Debian/Ubuntu family, Arch family, Fedora, RHEL family, openSUSE, Gentoo"
+        log WARN  "Supported: Debian/Ubuntu family, Arch family, Fedora, RHEL family, openSUSE, Gentoo, generic"
         log WARN  "See docs/adding-distro.md to contribute support for your distro"
         exit 1
         ;;

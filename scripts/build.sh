@@ -11,6 +11,7 @@
 #   -d, --distro   DISTRO    Target distro: debian|ubuntu|arch|fedora|gentoo
 #   -r, --release  RELEASE   Release codename (Debian/Ubuntu only, e.g. trixie)
 #   -a, --arch     ARCH      Target arch: x86_64|arm64|riscv64  (default: host arch)
+#   -m, --mlevel   LEVEL     x86-64 microarch level: v1|v2|v3|v4 (default: auto-detect)
 #   -j, --jobs     N         Parallel jobs (default: nproc/2, min 2)
 #   -b, --build    N         Build number (default: 1)
 #       --bdfs               Build btrfs_dwarfs out-of-tree module (btrfs-dwarfs-framework)
@@ -18,6 +19,8 @@
 #
 # Environment variables:
 #   KERNEL_VERSION  Required for Gentoo builds (e.g. 6.12.1)
+#   MLEVEL          x86-64 microarch level: v1|v2|v3|v4 (same as --mlevel)
+#                   Auto-detected from /proc/cpuinfo when ARCH=x86_64 and unset
 #   ENABLE_BDFS     Set to 1 to build the btrfs_dwarfs module (same as --bdfs)
 #   BDFS_SRC        Path to a btrfs-dwarfs-framework checkout (auto-cloned if absent)
 
@@ -44,6 +47,8 @@ source "${SCRIPT_DIR}/lib/build-rpm.sh"
 source "${SCRIPT_DIR}/lib/build-opensuse.sh"
 # shellcheck source=lib/build-gentoo.sh
 source "${SCRIPT_DIR}/lib/build-gentoo.sh"
+# shellcheck source=lib/build-generic.sh
+source "${SCRIPT_DIR}/lib/build-generic.sh"
 
 export REPO_ROOT
 
@@ -56,6 +61,8 @@ NPROC=$(nproc 2>/dev/null || echo 4)
 PROCS=$(( NPROC / 2 > 2 ? NPROC / 2 : 2 ))
 BUILD=1
 ENABLE_BDFS="${ENABLE_BDFS:-0}"
+# MLEVEL: auto-detect from CPU when unset and building for x86_64
+MLEVEL="${MLEVEL:-}"
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 
@@ -69,6 +76,7 @@ while [[ $# -gt 0 ]]; do
         -d|--distro)   DISTRO="$2";  shift 2 ;;
         -r|--release)  RELEASE="$2"; shift 2 ;;
         -a|--arch)     ARCH="$2";    shift 2 ;;
+        -m|--mlevel)   MLEVEL="$2";  shift 2 ;;
         -j|--jobs)     PROCS="$2";   shift 2 ;;
         -b|--build)    BUILD="$2";   shift 2 ;;
         --bdfs)        ENABLE_BDFS=1; shift ;;
@@ -82,13 +90,21 @@ if [[ -z "$DISTRO" ]]; then
     usage
 fi
 
+# Auto-detect MLEVEL from the running CPU when building for x86_64 and not set
+if [[ "$ARCH" == "x86_64" && -z "$MLEVEL" ]]; then
+    MLEVEL=$(detect_mlevel)
+    log INFO "MLEVEL auto-detected: ${MLEVEL}"
+fi
+
 export ARCH
+export MLEVEL
 export ENABLE_BDFS
 
 # ── Dispatch ──────────────────────────────────────────────────────────────────
 
 log INFO "Build target  : ${DISTRO}${RELEASE:+/${RELEASE}}"
 log INFO "Architecture  : ${ARCH}"
+[[ "$ARCH" == "x86_64" ]] && log INFO "Microarch     : x86-64-${MLEVEL}"
 log INFO "Parallel jobs : ${PROCS}"
 log INFO "Build number  : ${BUILD}"
 [[ "${ENABLE_BDFS}" == "1" ]] && log INFO "BTRFS+DwarFS  : enabled (btrfs_dwarfs module)"
@@ -113,9 +129,12 @@ case "$DISTRO" in
     gentoo)
         build_gentoo "$PROCS"
         ;;
+    generic)
+        build_generic "$PROCS"
+        ;;
     *)
         log ERROR "Unknown distro: ${DISTRO}"
-        log WARN  "Supported: debian, ubuntu, arch, fedora, rhel, opensuse, gentoo"
+        log WARN  "Supported: debian, ubuntu, arch, fedora, rhel, opensuse, gentoo, generic"
         exit 1
         ;;
 esac

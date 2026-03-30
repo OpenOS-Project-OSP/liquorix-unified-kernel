@@ -1,6 +1,37 @@
 #!/bin/bash
 # Distro and architecture detection helpers. Source this file; do not execute directly.
 
+# detect_mlevel prints the highest x86-64 microarch level supported by the
+# running CPU by inspecting /proc/cpuinfo flags.  Returns v1–v4.
+#
+# Level definitions (matches GCC -march=x86-64-vN):
+#   v1  baseline (SSE2)                          — all x86-64 CPUs
+#   v2  + SSE4.2, POPCNT, CX16, LAHF            — Nehalem 2008+, Bulldozer 2011+
+#   v3  + AVX, AVX2, BMI1, BMI2, FMA, MOVBE     — Haswell 2013+, Excavator 2015+
+#   v4  + AVX-512F/BW/CD/DQ/VL                  — Skylake-X 2017+, Zen 4 2022+
+detect_mlevel() {
+    local flags
+    flags=$(grep -m1 '^flags' /proc/cpuinfo 2>/dev/null || echo "")
+
+    # v4 requires AVX-512 (avx512f is the base flag)
+    if echo "$flags" | grep -qw 'avx512f'; then
+        echo "v4"; return
+    fi
+
+    # v3 requires AVX + AVX2
+    if echo "$flags" | grep -qw 'avx2' && echo "$flags" | grep -qw 'avx'; then
+        echo "v3"; return
+    fi
+
+    # v2 requires SSE4.2 + POPCNT
+    if echo "$flags" | grep -qw 'sse4_2' && echo "$flags" | grep -qw 'popcnt'; then
+        echo "v2"; return
+    fi
+
+    # v1 — baseline
+    echo "v1"
+}
+
 # detect_arch prints the normalized kernel architecture string:
 #   x86_64 | arm64 | riscv64
 detect_arch() {
@@ -10,6 +41,15 @@ detect_arch() {
         x86_64)          echo "x86_64" ;;
         aarch64|arm64)   echo "arm64" ;;
         riscv64)         echo "riscv64" ;;
+        i386|i486|i586|i686)
+            # i386/i686 is not supported. Neither XanMod nor Liquorix upstream
+            # ship 32-bit x86 configs or patches. The last Linux kernel with
+            # direct i386 support was 3.7.10 (2013); the Zen/Liquorix patch set
+            # targets 64-bit only. Use a 64-bit distro on any x86 hardware
+            # manufactured after ~2003.
+            echo "i386"
+            return 1
+            ;;
         *)
             echo "unknown"
             return 1

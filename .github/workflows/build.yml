@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   build-deb:
-    name: "deb / ${{ matrix.distro }} ${{ matrix.release }}"
+    name: "deb / ${{ matrix.distro }} ${{ matrix.release }} x86-64-${{ matrix.mlevel }}"
     runs-on: ubuntu-latest
     if: github.repository == 'Interested-Deving-1896/liquorix-unified-kernel'
     strategy:
@@ -22,12 +22,16 @@ jobs:
         include:
           - distro: debian
             release: trixie
+            mlevel: v2
           - distro: debian
             release: bookworm
+            mlevel: v3
           - distro: ubuntu
             release: noble
+            mlevel: v2
           - distro: ubuntu
             release: questing
+            mlevel: v3
 
     steps:
       - uses: jfrog-fastci/fastci@2c2686537a7647c727d20c955b26bb7ce6dea6d4 # ratchet:jfrog-fastci/fastci@v0
@@ -74,12 +78,13 @@ jobs:
           make build-${{ matrix.distro }} \
             RELEASE=${{ matrix.release }} \
             ARCH=x86_64 \
+            MLEVEL=${{ matrix.mlevel }} \
             PROCS=2
 
       - name: Upload artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # ratchet:actions/upload-artifact@v4
         with:
-          name: liquorix-${{ matrix.distro }}-${{ matrix.release }}-x86_64
+          name: liquorix-${{ matrix.distro }}-${{ matrix.release }}-x86_64-${{ matrix.mlevel }}
           path: artifacts/debian/${{ matrix.release }}/
           retention-days: 7
 

@@ -52,9 +52,10 @@ apply_patches() {
 }
 
 # select_config copies the appropriate Liquorix kernel config for the target
-# architecture into the kernel source tree as .config.
+# architecture into the kernel source tree as .config, then merges the
+# x86-64 microarch level fragment when ARCH=x86_64 and MLEVEL is set.
 #
-# Globals used: ARCH, KERNEL_MAJOR, LQX_REL, SRCDIR, REPO_ROOT
+# Globals used: ARCH, MLEVEL, KERNEL_MAJOR, LQX_REL, SRCDIR, REPO_ROOT
 select_config() {
     local kernel_dir="${SRCDIR}/linux-${KERNEL_MAJOR}"
     local lqx_pkg_dir="${SRCDIR}/liquorix-package-${KERNEL_MAJOR}-${LQX_REL}"
@@ -82,6 +83,21 @@ select_config() {
 
     log INFO "Using config: $config_src"
     cp "$config_src" "${kernel_dir}/.config"
+
+    # Merge x86-64 microarch level fragment when requested
+    if [[ "$ARCH" == "x86_64" && -n "${MLEVEL:-}" ]]; then
+        local mlevel_fragment="${REPO_ROOT}/configs/x86_64/microarch-${MLEVEL}.config"
+        if [[ ! -f "$mlevel_fragment" ]]; then
+            log ERROR "Unknown MLEVEL '${MLEVEL}'. Valid values: v1 v2 v3 v4"
+            exit 1
+        fi
+        log INFO "Merging microarch fragment: microarch-${MLEVEL}.config"
+        # scripts/kconfig/merge_config.sh merges fragments into an existing
+        # .config in-place, running olddefconfig to resolve any new symbols.
+        "${kernel_dir}/scripts/kconfig/merge_config.sh" \
+            -m "${kernel_dir}/.config" "$mlevel_fragment"
+        make -C "$kernel_dir" olddefconfig
+    fi
 }
 
 # build_bdfs_module builds the btrfs_dwarfs out-of-tree kernel module against

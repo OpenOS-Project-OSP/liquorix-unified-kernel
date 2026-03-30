@@ -45,6 +45,18 @@ Parabola, and more.
 | Distro | Install method | Build method |
 |---|---|---|
 | Gentoo + derivatives | `emerge` + `genkernel` | `genkernel` on-host |
+| Any distro (generic) | `make install` + `modules_install` | On-host, no packaging |
+
+The generic backend builds and installs the kernel directly on the host without
+creating distribution packages. Use it on distros not listed above, or when you
+want a plain kernel install without a package manager:
+
+```bash
+KERNEL_VERSION=6.12.1 make build-generic
+```
+
+After the build, update your bootloader and regenerate your initramfs manually
+(e.g. `update-grub`, `dracut -f`, or `mkinitcpio -P`).
 
 ### Not supported
 
@@ -65,10 +77,34 @@ Parabola, and more.
 | x86_64 | ✅ Full support — pre-built packages available |
 | arm64 | 🔧 Build system ready — use `gen-arch-config` workflow to generate config |
 | riscv64 | 🔧 Build system ready — use `gen-arch-config` workflow to generate config |
+| i386 / i686 | ❌ Not supported — XanMod/Liquorix require a 64-bit CPU |
 
 To generate an arm64 or riscv64 config, trigger the
 [Generate architecture configs](.github/workflows/gen-arch-config.yml)
 workflow manually from GitHub Actions, then follow [docs/adding-arch.md](docs/adding-arch.md).
+
+### x86-64 microarch levels
+
+The build system supports x86-64 microarch levels v1–v4, which tune the kernel
+for the instruction set extensions available on the target CPU:
+
+| Level | Minimum CPU features | Typical hardware |
+|---|---|---|
+| v1 | Baseline x86-64 | Any 64-bit x86 CPU (2003+) |
+| v2 | SSE4.2, POPCNT | Intel Nehalem (2008+), AMD Bulldozer (2011+) |
+| v3 | AVX2, BMI2 | Intel Haswell (2013+), AMD Excavator (2015+) |
+| v4 | AVX-512 | Intel Skylake-X (2017+), AMD Zen 4 (2022+) |
+
+The level is auto-detected from `/proc/cpuinfo` when `MLEVEL` is not set.
+Override it explicitly:
+
+```bash
+make build-debian RELEASE=trixie MLEVEL=v3
+./scripts/build.sh --distro debian --release trixie --mlevel v3
+```
+
+The microarch fragment is merged on top of the upstream Liquorix x86_64 config
+using `scripts/kconfig/merge_config.sh`, so all Liquorix tuning is preserved.
 
 ## Quick install
 
@@ -138,6 +174,9 @@ make bootstrap-opensuse && make build-opensuse OPENSUSE_RELEASE=tumbleweed
 
 # Gentoo (no Docker — runs genkernel on the host)
 make build-gentoo KERNEL_VERSION=6.12.1
+
+# Generic (no Docker, no packaging — plain make install, any distro)
+make build-generic KERNEL_VERSION=6.12.1
 ```
 
 Run `make` with no arguments to see all targets and variables.
@@ -163,6 +202,10 @@ reporting build time and package sizes.
 ```
 configs/                  Kernel .config files per architecture
   x86_64/                 Pulled from damentz/liquorix-package at build time
+    microarch-v1.config   CONFIG_GENERIC_CPU=y  (baseline x86-64)
+    microarch-v2.config   CONFIG_GENERIC_CPU2=y (SSE4.2+)
+    microarch-v3.config   CONFIG_GENERIC_CPU3=y (AVX2+)
+    microarch-v4.config   CONFIG_GENERIC_CPU4=y (AVX-512+)
   arm64/                  Placeholder — generate with gen-arch-config workflow
   riscv64/                Placeholder — generate with gen-arch-config workflow
 
@@ -191,6 +234,7 @@ scripts/
     install-opensuse.sh   openSUSE install from local RPM
     install-gentoo.sh     Gentoo source build via genkernel
     install-alpine.sh     Alpine — detected, explains musl incompatibility
+    install-generic.sh    Generic — no-op (kernel installed during build)
     build-common.sh       Shared source fetch + patch + config helpers
                           (also provides build_bdfs_module for ENABLE_BDFS=1)
     build-deb.sh          Debian/Ubuntu two-stage build (source → binary)
@@ -198,6 +242,7 @@ scripts/
     build-rpm.sh          Fedora/RHEL RPM build via rpmbuild
     build-opensuse.sh     openSUSE RPM build via rpmbuild
     build-gentoo.sh       Gentoo build via genkernel
+    build-generic.sh      Generic build via plain make install (any distro)
 
 docs/
   adding-arch.md          How to author a kernel config for a new architecture

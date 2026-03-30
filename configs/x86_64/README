@@ -1,10 +1,29 @@
 x86_64 config
 =============
 
-The kernel config for x86_64 is pulled directly from the upstream
+The base kernel config for x86_64 is pulled directly from the upstream
 damentz/liquorix-package at build time:
 
   linux-liquorix/debian/config/kernelarch-x86/config-arch-64
 
 It is not vendored here to avoid drift. The build scripts fetch it from
 the matching kernel branch of the upstream repo.
+
+Microarch level fragments
+-------------------------
+
+The following fragments are merged on top of the upstream base config to
+set the x86-64 microarch optimisation level (MLEVEL=v1|v2|v3|v4):
+
+  microarch-v1.config   Generic x86-64 baseline (SSE2, any CPU since ~2003)
+  microarch-v2.config   SSE4.2, POPCNT — Intel Nehalem (2008+), AMD Bulldozer (2011+)
+  microarch-v3.config   AVX2, FMA     — Intel Haswell (2013+), AMD Excavator (2015+)
+  microarch-v4.config   AVX-512       — Intel Skylake-X (2017+), AMD Zen 4 (2022+)
+
+The default level is v2 (broadest modern compatibility). Override with:
+
+  make build-debian RELEASE=trixie MLEVEL=v3
+  MLEVEL=v3 ./scripts/build.sh --distro debian --release trixie
+
+If MLEVEL is not set, the upstream config is used as-is (equivalent to v1
+behaviour, since the upstream config sets CONFIG_GENERIC_CPU=y).
