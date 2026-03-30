@@ -12,6 +12,9 @@
 
 install_generic() {
     local arch=$1
+    # arch is accepted for interface consistency with other install_* functions
+    # but is not used here — the kernel was already installed during build.
+    : "$arch"
 
     log INFO "Generic backend: kernel was installed during build (make install + modules_install)."
     log INFO "No additional package installation step required."
