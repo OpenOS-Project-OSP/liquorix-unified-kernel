@@ -84,6 +84,37 @@ On Gentoo, set `KERNEL_VERSION` first:
 KERNEL_VERSION=6.12.1 sudo ./scripts/install.sh
 ```
 
+## BTRFS+DwarFS framework
+
+Setting `ENABLE_BDFS=1` builds and installs the `btrfs_dwarfs` kernel module
+from [btrfs-dwarfs-framework](https://github.com/Interested-Deving-1896/btrfs-dwarfs-framework)
+alongside the Liquorix kernel.
+
+```bash
+# Build Liquorix + btrfs_dwarfs module for Debian trixie
+make bootstrap-debian
+make build-debian RELEASE=trixie ENABLE_BDFS=1
+
+# Install (kernel + module)
+sudo make install ENABLE_BDFS=1
+
+# Point to an existing checkout instead of auto-cloning
+make build-arch ENABLE_BDFS=1 BDFS_SRC=~/src/btrfs-dwarfs-framework
+```
+
+What happens when `ENABLE_BDFS=1`:
+
+1. After the distro package build completes, `scripts/lib/build-common.sh:build_bdfs_module`
+   clones btrfs-dwarfs-framework into `.bdfs-src/` (or uses `BDFS_SRC`) and
+   builds `btrfs_dwarfs.ko` against the extracted kernel source tree.
+2. During `make install` / `sudo ./scripts/install.sh`, the `.ko` is copied to
+   `/lib/modules/<version>/extra/` and `depmod -a` is run.
+3. Load the module with `modprobe btrfs_dwarfs`.
+
+The userspace daemon and CLI from btrfs-dwarfs-framework are not built or
+installed by this repo — build them separately with `make userspace` in the
+framework checkout.
+
 ## Building from source
 
 Requires Docker (except Gentoo). Run `make bootstrap-<distro>` once before
@@ -161,6 +192,7 @@ scripts/
     install-gentoo.sh     Gentoo source build via genkernel
     install-alpine.sh     Alpine — detected, explains musl incompatibility
     build-common.sh       Shared source fetch + patch + config helpers
+                          (also provides build_bdfs_module for ENABLE_BDFS=1)
     build-deb.sh          Debian/Ubuntu two-stage build (source → binary)
     build-arch.sh         Arch Linux build via makepkg
     build-rpm.sh          Fedora/RHEL RPM build via rpmbuild

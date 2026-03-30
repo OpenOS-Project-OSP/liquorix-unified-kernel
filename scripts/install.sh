@@ -6,9 +6,15 @@
 #
 # Usage:
 #   sudo ./scripts/install.sh
+#   sudo ENABLE_BDFS=1 ./scripts/install.sh          # also install btrfs_dwarfs module
 #
 # Environment variables:
 #   KERNEL_VERSION  Required on Gentoo (e.g. KERNEL_VERSION=6.12.1)
+#   ENABLE_BDFS     Set to 1 to install the btrfs_dwarfs out-of-tree module after
+#                   the kernel.  Requires the module to have been built first via
+#                   `scripts/build.sh --bdfs` (or ENABLE_BDFS=1 make build-*).
+#   BDFS_SRC        Path to the btrfs-dwarfs-framework checkout containing the
+#                   built btrfs_dwarfs.ko (default: .bdfs-src/ in repo root)
 #
 # Supported distros:
 #   Debian, Ubuntu and all derivatives (apt-based)
@@ -26,6 +32,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+ENABLE_BDFS="${ENABLE_BDFS:-0}"
+BDFS_SRC="${BDFS_SRC:-${REPO_ROOT}/.bdfs-src}"
 
 # shellcheck source=lib/log.sh
 source "${SCRIPT_DIR}/lib/log.sh"
@@ -90,3 +99,22 @@ case "$DISTRO" in
         exit 1
         ;;
 esac
+
+# ── Optional: install btrfs_dwarfs out-of-tree module ─────────────────────────
+if [[ "${ENABLE_BDFS}" == "1" ]]; then
+    log INFO "Installing btrfs_dwarfs module"
+
+    local_ko="${BDFS_SRC}/kernel/btrfs_dwarfs/btrfs_dwarfs.ko"
+    if [[ ! -f "${local_ko}" ]]; then
+        log ERROR "btrfs_dwarfs.ko not found at ${local_ko}"
+        log WARN  "Build it first: ENABLE_BDFS=1 make build-<distro>"
+        exit 1
+    fi
+
+    kernel_version=$(uname -r)
+    dest="/lib/modules/${kernel_version}/extra"
+    install -D -m 644 "${local_ko}" "${dest}/btrfs_dwarfs.ko"
+    depmod -a "${kernel_version}"
+    log INFO "btrfs_dwarfs.ko installed to ${dest}/"
+    log INFO "Load with: modprobe btrfs_dwarfs"
+fi

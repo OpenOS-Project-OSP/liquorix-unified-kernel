@@ -31,3 +31,6 @@ src/
 
 # Upstream repo cache (populated by scripts/bootstrap.sh)
 .upstream-cache/
+
+# btrfs-dwarfs-framework checkout (auto-cloned by build-common.sh)
+.bdfs-src/

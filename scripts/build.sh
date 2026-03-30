@@ -13,10 +13,13 @@
 #   -a, --arch     ARCH      Target arch: x86_64|arm64|riscv64  (default: host arch)
 #   -j, --jobs     N         Parallel jobs (default: nproc/2, min 2)
 #   -b, --build    N         Build number (default: 1)
+#       --bdfs               Build btrfs_dwarfs out-of-tree module (btrfs-dwarfs-framework)
 #   -h, --help               Show this help
 #
 # Environment variables:
 #   KERNEL_VERSION  Required for Gentoo builds (e.g. 6.12.1)
+#   ENABLE_BDFS     Set to 1 to build the btrfs_dwarfs module (same as --bdfs)
+#   BDFS_SRC        Path to a btrfs-dwarfs-framework checkout (auto-cloned if absent)
 
 set -euo pipefail
 
@@ -52,6 +55,7 @@ ARCH=$(detect_arch)
 NPROC=$(nproc 2>/dev/null || echo 4)
 PROCS=$(( NPROC / 2 > 2 ? NPROC / 2 : 2 ))
 BUILD=1
+ENABLE_BDFS="${ENABLE_BDFS:-0}"
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 
@@ -67,6 +71,7 @@ while [[ $# -gt 0 ]]; do
         -a|--arch)     ARCH="$2";    shift 2 ;;
         -j|--jobs)     PROCS="$2";   shift 2 ;;
         -b|--build)    BUILD="$2";   shift 2 ;;
+        --bdfs)        ENABLE_BDFS=1; shift ;;
         -h|--help)     usage ;;
         *) log ERROR "Unknown option: $1"; usage ;;
     esac
@@ -78,6 +83,7 @@ if [[ -z "$DISTRO" ]]; then
 fi
 
 export ARCH
+export ENABLE_BDFS
 
 # ── Dispatch ──────────────────────────────────────────────────────────────────
 
@@ -85,6 +91,7 @@ log INFO "Build target  : ${DISTRO}${RELEASE:+/${RELEASE}}"
 log INFO "Architecture  : ${ARCH}"
 log INFO "Parallel jobs : ${PROCS}"
 log INFO "Build number  : ${BUILD}"
+[[ "${ENABLE_BDFS}" == "1" ]] && log INFO "BTRFS+DwarFS  : enabled (btrfs_dwarfs module)"
 
 case "$DISTRO" in
     debian|ubuntu)
@@ -112,3 +119,9 @@ case "$DISTRO" in
         exit 1
         ;;
 esac
+
+# ── Optional: build btrfs_dwarfs out-of-tree module ───────────────────────────
+# Runs after the distro package build so the kernel source tree is fully built.
+# For Docker-based distros the module is built on the host against the extracted
+# source tree in SRCDIR; for Gentoo it runs on-host after genkernel.
+build_bdfs_module

@@ -1,5 +1,11 @@
 #!/bin/bash
 # Shared build helpers. Source this file; do not execute directly.
+#
+# Provides:
+#   fetch_sources    — download vanilla kernel + liquorix-package archives
+#   apply_patches    — apply zen/lqx patch series
+#   select_config    — copy the appropriate Liquorix .config into the tree
+#   build_bdfs_module — build the btrfs_dwarfs out-of-tree module (ENABLE_BDFS=1)
 
 # fetch_sources downloads the vanilla kernel tarball and the liquorix-package
 # archive into $SRCDIR, then extracts them.
@@ -76,4 +82,59 @@ select_config() {
 
     log INFO "Using config: $config_src"
     cp "$config_src" "${kernel_dir}/.config"
+}
+
+# build_bdfs_module builds the btrfs_dwarfs out-of-tree kernel module against
+# the extracted kernel source tree.  Called after the kernel has been compiled
+# so that the Module.symvers file is present.
+#
+# For Docker-based distros (debian, ubuntu, arch, fedora, opensuse) the kernel
+# source is extracted inside the container and is not available on the host
+# after the container exits.  In those cases SRCDIR and KERNEL_MAJOR are unset
+# on the host, so this function falls back to building against the running
+# host kernel headers (/lib/modules/$(uname -r)/build).  This produces a
+# module compatible with the host kernel, not the freshly built Liquorix
+# kernel — suitable for testing, but the module should be rebuilt after
+# rebooting into the new kernel.
+#
+# For Gentoo (on-host build) SRCDIR and KERNEL_MAJOR are set by build-gentoo.sh
+# so the module is built against the correct tree.
+#
+# Globals used: KERNEL_MAJOR, SRCDIR, REPO_ROOT
+# Environment:
+#   ENABLE_BDFS   set to 1 to activate (default: 0)
+#   BDFS_SRC      path to a btrfs-dwarfs-framework checkout; auto-cloned if absent
+build_bdfs_module() {
+    local enable_bdfs="${ENABLE_BDFS:-0}"
+    [[ "${enable_bdfs}" != "1" ]] && return 0
+
+    local bdfs_src="${BDFS_SRC:-${REPO_ROOT}/.bdfs-src}"
+    local bdfs_repo="https://github.com/Interested-Deving-1896/btrfs-dwarfs-framework.git"
+
+    # Determine the kernel tree to build against
+    local kernel_dir
+    if [[ -n "${SRCDIR:-}" && -n "${KERNEL_MAJOR:-}" && -d "${SRCDIR}/linux-${KERNEL_MAJOR}" ]]; then
+        # On-host build (Gentoo): use the extracted source tree
+        kernel_dir="${SRCDIR}/linux-${KERNEL_MAJOR}"
+        log INFO "Building btrfs_dwarfs against Liquorix source: ${kernel_dir}"
+    else
+        # Docker-based build: source tree is inside the container; fall back to
+        # host kernel headers so the module can at least be compiled and tested.
+        kernel_dir="/lib/modules/$(uname -r)/build"
+        log WARN "Kernel source not available on host (Docker-based build)."
+        log WARN "Building btrfs_dwarfs against running kernel headers: ${kernel_dir}"
+        log WARN "Rebuild the module after rebooting into the new Liquorix kernel."
+    fi
+
+    if [[ ! -d "${bdfs_src}/kernel/btrfs_dwarfs" ]]; then
+        log INFO "Cloning btrfs-dwarfs-framework into ${bdfs_src}"
+        git clone --depth=1 "${bdfs_repo}" "${bdfs_src}"
+    fi
+
+    log INFO "Building btrfs_dwarfs module"
+    make -C "${bdfs_src}/kernel" KDIR="${kernel_dir}"
+    log INFO "Module built: ${bdfs_src}/kernel/btrfs_dwarfs/btrfs_dwarfs.ko"
+
+    # Expose the path for install steps
+    export BDFS_KO="${bdfs_src}/kernel/btrfs_dwarfs/btrfs_dwarfs.ko"
 }
