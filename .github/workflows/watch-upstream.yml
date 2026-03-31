@@ -117,6 +117,10 @@ jobs:
           echo "$LATEST" > VERSION
           git add VERSION
           git commit -m "Update to Liquorix ${LATEST}"
+          
+          # Pull latest changes to avoid non-fast-forward error
+          git pull origin "$BRANCH" || true
+          
           git push origin "$BRANCH"
 
           # Open PR
