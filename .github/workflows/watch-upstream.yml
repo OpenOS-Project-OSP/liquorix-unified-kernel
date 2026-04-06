@@ -121,7 +121,8 @@ jobs:
           # Pull latest changes to avoid non-fast-forward error with rebase
           git pull --rebase origin main || true
           
-          git push origin "$BRANCH"
+          # Force push to handle non-fast-forward errors
+          git push --force origin "$BRANCH"
 
           # Open PR
           gh pr create \
