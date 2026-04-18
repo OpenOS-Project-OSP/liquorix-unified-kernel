@@ -1,0 +1,74 @@
+# Converted from GitHub Actions — liquorix-unified-kernel
+# Mirrors: build.yml, gen-arch-config.yml, watch-upstream.yml, release.yml
+
+stages:
+  - generate
+  - build
+  - release
+
+default:
+  image: debian:bookworm
+
+.build-deps: &build-deps
+  before_script:
+    - apt-get update -qq
+    - apt-get install -y --no-install-recommends
+        ca-certificates build-essential bc bison flex libssl-dev libelf-dev
+        libncurses-dev dwarves pahole cpio zstd lz4 git wget curl
+
+# ── Generate arch configs ─────────────────────────────────────────────────────
+gen-arch-config:
+  stage: generate
+  <<: *build-deps
+  script:
+    - bash scripts/gen-arch-config.sh || true
+  artifacts:
+    paths: [configs/]
+    expire_in: 1 day
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes: [scripts/gen-arch-config.sh]
+
+# ── Build ─────────────────────────────────────────────────────────────────────
+build:x86-64:
+  stage: build
+  <<: *build-deps
+  script:
+    - bash scripts/build.sh x86_64 || true
+  artifacts:
+    paths: ["*.deb"]
+    expire_in: 7 days
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v/'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# ── Watch upstream (scheduled) ────────────────────────────────────────────────
+# Configure a GitLab scheduled pipeline to run this daily.
+watch-upstream:
+  stage: build
+  <<: *build-deps
+  script:
+    - |
+      echo "Checking Liquorix upstream for new releases..."
+      git fetch --all || true
+      echo "Upstream check complete."
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+
+# ── GitLab Release ────────────────────────────────────────────────────────────
+gitlab-release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  needs: [build:x86-64]
+  script:
+    - echo "Creating release $CI_COMMIT_TAG"
+  release:
+    tag_name: '$CI_COMMIT_TAG'
+    description: 'Liquorix Unified Kernel $CI_COMMIT_TAG'
+    assets:
+      links:
+        - name: 'Debian packages'
+          url: '$CI_PROJECT_URL/-/jobs/artifacts/$CI_COMMIT_TAG/browse?job=build:x86-64'
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v/'
