@@ -9,6 +9,6 @@
     </longdescription>
     <upstream>
         <remote-id type="github">damentz/liquorix-package</remote-id>
-        <bugs-to>https://github.com/Interested-Deving-1896/liquorix-unified-kernel/issues</bugs-to>
+        <bugs-to>https://gitlab.com/OSPF1896/liquorix-unified-kernel/issues</bugs-to>
     </upstream>
 </pkgmetadata>

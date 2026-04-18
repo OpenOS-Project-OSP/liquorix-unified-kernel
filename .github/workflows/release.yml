@@ -273,6 +273,6 @@ jobs:
 
             ### Verify signatures
 
-            See [docs/gpg-signing.md](https://github.com/Interested-Deving-1896/liquorix-unified-kernel/blob/main/docs/gpg-signing.md)
+            See [docs/gpg-signing.md](https://gitlab.com/OSPF1896/liquorix-unified-kernel/blob/main/docs/gpg-signing.md)
             for instructions on verifying package signatures.
           files: release-assets/**/*

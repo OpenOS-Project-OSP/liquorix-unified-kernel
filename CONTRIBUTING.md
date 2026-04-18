@@ -9,7 +9,7 @@
 ## Getting started
 
 ```bash
-git clone https://github.com/Interested-Deving-1896/liquorix-unified-kernel
+git clone https://gitlab.com/OSPF1896/liquorix-unified-kernel
 cd liquorix-unified-kernel
 
 # Fetch upstream build infrastructure and build Docker images
