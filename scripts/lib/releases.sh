@@ -2,7 +2,7 @@
 # GitHub Releases download helpers.
 # Source this file; do not execute directly.
 
-RELEASES_API="https://api.github.com/repos/Interested-Deving-1896/liquorix-unified-kernel/releases/latest"
+RELEASES_API="https://api.github.com/repos/OSPF1896/liquorix-unified-kernel/releases/latest"
 RELEASES_BASE="https://gitlab.com/OSPF1896/liquorix-unified-kernel/releases/latest/download"
 
 # latest_release_version prints the latest release tag (e.g. v6.12.1-lqx1),

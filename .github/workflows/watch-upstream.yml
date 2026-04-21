@@ -17,7 +17,7 @@ jobs:
     name: Check for new upstream release
     runs-on: ubuntu-latest
     # Only run in the canonical source repo — skip in mirrors
-    if: github.repository == 'Interested-Deving-1896/liquorix-unified-kernel'
+    if: github.repository == 'OSPF1896/liquorix-unified-kernel'
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # ratchet:actions/checkout@v4

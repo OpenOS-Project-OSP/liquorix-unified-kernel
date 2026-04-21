@@ -15,7 +15,7 @@ jobs:
   build-deb:
     name: "deb / ${{ matrix.distro }} ${{ matrix.release }}"
     runs-on: ubuntu-latest
-    if: github.repository == 'Interested-Deving-1896/liquorix-unified-kernel'
+    if: github.repository == 'OSPF1896/liquorix-unified-kernel'
     strategy:
       fail-fast: false
       matrix:
@@ -86,7 +86,7 @@ jobs:
   build-arch:
     name: "pkg / arch x86_64"
     runs-on: ubuntu-latest
-    if: github.repository == 'Interested-Deving-1896/liquorix-unified-kernel'
+    if: github.repository == 'OSPF1896/liquorix-unified-kernel'
     # Upstream damentz/liquorix-package does not CI-test the arch build.
     # The 6.19 Dockerfile has a makepkg BUILDENV regression and missing GPG
     # keys that are outside our control. Allow failure until upstream fixes it.
@@ -128,7 +128,7 @@ jobs:
   build-fedora:
     name: "rpm / fedora ${{ matrix.release }}"
     runs-on: ubuntu-latest
-    if: github.repository == 'Interested-Deving-1896/liquorix-unified-kernel'
+    if: github.repository == 'OSPF1896/liquorix-unified-kernel'
     # Upstream damentz/liquorix-package does not CI-test the fedora build.
     # The 6.19 container_build-binary.sh has a hardcoded lqx1 patch filename
     # that doesn't match the actual lqx2 patch. Allow failure until upstream fixes it.
@@ -190,7 +190,7 @@ jobs:
   validate-arch-configs:
     name: "config / ${{ matrix.arch }}"
     runs-on: ubuntu-latest
-    if: github.repository == 'Interested-Deving-1896/liquorix-unified-kernel'
+    if: github.repository == 'OSPF1896/liquorix-unified-kernel'
     strategy:
       fail-fast: false
       matrix:
@@ -213,7 +213,7 @@ jobs:
   shellcheck:
     name: shellcheck
     runs-on: ubuntu-latest
-    if: github.repository == 'Interested-Deving-1896/liquorix-unified-kernel'
+    if: github.repository == 'OSPF1896/liquorix-unified-kernel'
 
     steps:
       - uses: jfrog-fastci/fastci@2c2686537a7647c727d20c955b26bb7ce6dea6d4 # ratchet:jfrog-fastci/fastci@v0

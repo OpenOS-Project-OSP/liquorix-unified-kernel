@@ -258,7 +258,7 @@ jobs:
             The fastest way to install is the unified installer:
 
             ```bash
-            curl -fsSL https://raw.githubusercontent.com/Interested-Deving-1896/liquorix-unified-kernel/main/scripts/install.sh | sudo bash
+            curl -fsSL https://raw.githubusercontent.com/OSPF1896/liquorix-unified-kernel/main/scripts/install.sh | sudo bash
             ```
 
             Or download packages below and install manually.
