@@ -31,3 +31,4 @@ src/
 
 # Upstream repo cache (populated by scripts/bootstrap.sh)
 .upstream-cache/
+.npmrc
