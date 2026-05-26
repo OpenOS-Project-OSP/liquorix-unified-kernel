@@ -4,7 +4,7 @@
 [![Built with Ona](https://ona.com/build-with-ona.svg)](https://app.ona.com/#https://github.com/Interested-Deving-1896/liquorix-unified-kernel)
 
 <!-- AI:start:what-it-does -->
-This project provides a unified build and installation system for the Liquorix kernel, designed to work across multiple Linux distributions and architectures. It simplifies the process of building and deploying the Liquorix kernel by offering a consistent interface for various environments, including Debian, Ubuntu, Arch, Fedora, and Gentoo. It is intended for developers and system administrators who need to build and install the Liquorix kernel in a flexible, repeatable manner.
+This project provides a unified build and installation system for the Liquorix kernel, designed to work across multiple Linux distributions and architectures. It simplifies the process of building and deploying the Liquorix kernel by offering a consistent interface for various environments, including Debian, Ubuntu, Arch, Fedora, and Gentoo. It is intended for developers and system administrators who need to build and manage custom kernel versions efficiently.
 <!-- AI:end:what-it-does -->
 
 ## Architecture
