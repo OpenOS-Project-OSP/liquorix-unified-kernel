@@ -1,0 +1,5 @@
+ppc64el config
+=============
+
+Liquorix kernel config fragment for ppc64el.
+Merged with the upstream damentz/liquorix-package patchset config at build time.

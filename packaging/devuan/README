@@ -1,0 +1,12 @@
+Debian/Ubuntu packaging
+=======================
+
+Place here:
+- Dockerfile          — build environment image
+- build-inside.sh     — script run inside the container to produce .deb packages
+
+The Debian package rules (debian/ directory) are sourced from
+damentz/liquorix-package at build time via the liquorix-package archive.
+They do not need to be vendored here.
+
+Reference: https://github.com/damentz/liquorix-package/tree/6.x/master/linux-liquorix/debian

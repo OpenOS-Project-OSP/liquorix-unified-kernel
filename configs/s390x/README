@@ -1,0 +1,5 @@
+s390x config
+===========
+
+Liquorix kernel config fragment for s390x.
+Merged with the upstream damentz/liquorix-package patchset config at build time.

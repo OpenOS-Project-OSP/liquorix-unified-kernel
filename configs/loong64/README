@@ -1,0 +1,5 @@
+loong64 config
+=============
+
+Liquorix kernel config fragment for loong64.
+Merged with the upstream damentz/liquorix-package patchset config at build time.

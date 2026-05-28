@@ -1,0 +1,5 @@
+armhf config
+===========
+
+Liquorix kernel config fragment for armhf.
+Merged with the upstream damentz/liquorix-package patchset config at build time.

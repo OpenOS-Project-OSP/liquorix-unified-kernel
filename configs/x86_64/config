@@ -1,0 +1,16 @@
+# Liquorix x86_64 config
+# Pulled from damentz/liquorix-package at build time for the x86_64 target.
+# This is the primary/reference architecture for Liquorix.
+
+CONFIG_64BIT=y
+CONFIG_X86_64=y
+CONFIG_GENERIC_CPU=y
+CONFIG_PREEMPT=y
+CONFIG_HZ_1000=y
+CONFIG_NO_HZ_FULL=y
+CONFIG_RCU_NOCB_CPU=y
+CONFIG_INTEL_IOMMU=y
+CONFIG_AMD_IOMMU=y
+CONFIG_KVM=m
+CONFIG_KVM_INTEL=m
+CONFIG_KVM_AMD=m

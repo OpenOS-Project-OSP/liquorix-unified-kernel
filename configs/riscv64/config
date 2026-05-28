@@ -1,0 +1,15 @@
+# Liquorix riscv64 config
+# Pulled from damentz/liquorix-package at build time for the riscv64 target.
+
+CONFIG_RISCV=y
+CONFIG_64BIT=y
+CONFIG_RISCV_ISA_C=y
+CONFIG_RISCV_ISA_V=y
+CONFIG_SOC_SIFIVE=y
+CONFIG_SOC_STARFIVE=y
+CONFIG_KVM=m
+CONFIG_KVM_RISCV_HOST=m
+CONFIG_PREEMPT=y
+CONFIG_HZ_1000=y
+CONFIG_NO_HZ_FULL=y
+CONFIG_RCU_NOCB_CPU=y
