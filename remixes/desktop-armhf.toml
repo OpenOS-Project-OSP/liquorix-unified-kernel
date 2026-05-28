@@ -1,0 +1,32 @@
+[remix]
+name        = "liquorix-desktop-armhf"
+version     = "latest"
+flavor      = "liquorix"
+arch        = "armv7l"
+description = "Liquorix desktop kernel for armhf (32-bit ARM)"
+
+[build]
+llvm         = false
+lto          = "none"
+threads      = 0
+config       = "defconfig"
+target       = "desktop"
+output       = "deb"
+localversion = "-lqx"
+
+[patches]
+sets  = []
+files = []
+
+[cross]
+prefix = "arm-linux-gnueabihf-"
+
+[output]
+build_dir    = "build/armhf"
+download_dir = "downloads"
+clean_after  = false
+remove_after = false
+
+[lkf_hook]
+script = "scripts/lkf-build.sh"
+env    = { DISTRO = "debian", RELEASE = "trixie", ARCH = "armhf" }
