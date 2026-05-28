@@ -1,4 +1,3 @@
-[update-readmes]   Mode: rewrite — migrating to template structure...
 # liquorix-unified-kernel
 
 [![Built with Ona](https://ona.com/build-with-ona.svg)](https://app.ona.com/#https://github.com/Interested-Deving-1896/liquorix-unified-kernel)
@@ -30,7 +29,7 @@ Directory structure:
 ├── README.md            # Project documentation
 ├── VERSION              # Current version of the project
 └── fastci.config.json   # Configuration for fast CI builds
-``` 
+```
 
 Key components interact through the `Makefile`, which orchestrates the build process by invoking scripts and configurations based on the target distribution, release, and architecture.
 <!-- AI:end:architecture -->
@@ -82,8 +81,8 @@ Direct commits to OSP or OOC are detected and opened as PRs back to `Interested-
 ## Contributors
 
 <!-- AI:start:contributors -->
-[@Interested-Deving-1896](https://github.com/Interested-Deving-1896) - 56 commits  
-[@ona-agent](https://github.com/ona-agent) - 1 commit  
+[@Interested-Deving-1896](https://github.com/Interested-Deving-1896) - 56 commits
+[@ona-agent](https://github.com/ona-agent) - 1 commit
 
 *Note: This repository is a mirror. Please refer to the upstream source for additional contributions and updates.*
 <!-- AI:end:contributors -->
