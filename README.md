@@ -3,35 +3,32 @@
 [![Built with Ona](https://ona.com/build-with-ona.svg)](https://app.ona.com/#https://github.com/Interested-Deving-1896/liquorix-unified-kernel)
 
 <!-- AI:start:what-it-does -->
-This project provides a unified build and installation system for the Liquorix kernel, designed to work across multiple Linux distributions and architectures. It simplifies the process of building and deploying the Liquorix kernel by offering a consistent interface for various environments, including Debian, Ubuntu, Arch, Fedora, and Gentoo. It is intended for developers and system administrators who need to build and manage custom kernel versions efficiently.
+This project provides a unified build and installation system for the Liquorix kernel, designed to work across multiple Linux distributions and architectures. It simplifies the process of building and installing the kernel by offering a consistent interface for developers and system administrators, regardless of the target environment.
 <!-- AI:end:what-it-does -->
 
 ## Architecture
 
 <!-- AI:start:architecture -->
-The project consists of a modular build system for compiling and installing the Liquorix kernel across multiple Linux distributions and architectures. The architecture is centered around a `Makefile` that defines build and installation targets, with support for parallel builds, custom kernel versions, and architecture-specific configurations. The build process relies on shell scripts located in the `scripts` directory, while distribution-specific configurations are stored in the `configs` directory. Continuous integration workflows are defined in `.github/workflows`.
+The Liquorix Unified Kernel project consists of a modular build system designed to support multiple Linux distributions and architectures. The key components include a `Makefile` that defines build and installation targets, a `scripts` directory containing helper scripts, and configuration files for specific distributions and architectures. The `Makefile` handles build logic, parallelization, and variable management, allowing users to specify parameters such as target architecture, kernel version, and distribution-specific settings. Workflow automation files in `.github` facilitate CI/CD processes. The directory structure is organized as follows:
 
-Directory structure:
 ```plaintext
 .
-├── .devcontainer/       # Development container configuration
-├── .github/             # GitHub Actions workflows
-│   └── workflows/
-├── configs/             # Distribution-specific build configurations
-├── docs/                # Documentation files
-├── packaging/           # Packaging-related scripts and files
-├── scripts/             # Helper scripts for build and installation
-├── .gitignore           # Git ignore rules
-├── .gitlab-ci.yml       # GitLab CI configuration
-├── CONTRIBUTING.md      # Contribution guidelines
-├── LICENSE              # License file
-├── Makefile             # Main build system entry point
-├── README.md            # Project documentation
-├── VERSION              # Current version of the project
-└── fastci.config.json   # Configuration for fast CI builds
+├── .github                 # CI/CD workflows and automation scripts
+├── config                  # General configuration files
+├── configs                 # Distribution-specific configuration files
+├── docs                    # Documentation files
+├── packaging               # Packaging scripts for various distributions
+├── remixes                 # Custom kernel remixes
+├── scripts                 # Helper scripts for build and install processes
+├── Makefile                # Main build system entry point
+├── README.md               # Project documentation
+├── LICENSE                 # License information
+├── VERSION                 # Current version of the project
+├── fastci.config.json      # Configuration for fast CI builds
+└── .gitignore              # Git ignore rules
 ```
 
-Key components interact through the `Makefile`, which orchestrates the build process by invoking scripts and configurations based on the target distribution, release, and architecture.
+Components interact through the `Makefile`, which invokes scripts and uses configuration files to execute tasks such as building, packaging, and installing the Liquorix kernel across supported distributions and architectures.
 <!-- AI:end:architecture -->
 
 ## Install
@@ -56,12 +53,15 @@ cd liquorix-unified-kernel
 <!-- AI:start:ci -->
 The repository uses GitHub Actions for continuous integration and automation. Below are the workflows and their purposes:
 
-- **build.yml**: Builds the Liquorix kernel for various distributions and architectures. No secrets required.
-- **gen-arch-config.yml**: Generates Arch Linux kernel configuration files. No secrets required.
-- **labeler.yml**: Automatically labels pull requests based on file changes. No secrets required.
-- **release.yml**: Creates and publishes new releases. Requires the `GH_TOKEN` secret for authentication.
-- **trigger-artifact-mirror.yml**: Triggers artifact mirroring to external storage. Requires `MIRROR_API_KEY` secret.
-- **watch-upstream.yml**: Monitors upstream kernel releases and creates issues for new versions. No secrets required.
+- **build.yml**: Builds the Liquorix kernel for supported distributions and architectures. No secrets required.
+- **release.yml**: Handles the release process, including tagging and publishing artifacts. Requires `GITHUB_TOKEN`.
+- **cleanup-branches.yml**: Removes stale branches from the repository. Requires `GITHUB_TOKEN`.
+- **mirror-releases.yml**: Mirrors release artifacts to external storage. Requires `MIRROR_STORAGE_KEY`.
+- **sync-forks.yml**: Synchronizes forks with upstream repositories. Requires `GITHUB_TOKEN`.
+- **validate-config.yml**: Validates configuration files for consistency. No secrets required.
+- **rate-limit-status.yml**: Monitors API rate limits for GitHub. Requires `GITHUB_TOKEN`.
+
+Refer to the `.github/workflows` directory for detailed configurations of each workflow.
 <!-- AI:end:ci -->
 
 ## Mirror chain
