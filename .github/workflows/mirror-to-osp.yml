@@ -36,7 +36,7 @@ jobs:
 
       - name: Mirror matched repos from upstream into OSP
         env:
-          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}  # Ensure the correct secret is used
           UPSTREAM_OWNER: Interested-Deving-1896
           OSP_ORG: OpenOS-Project-OSP
           REPO_FILTER: ${{ inputs.repo_filter || '' }}
