@@ -53,7 +53,12 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run || 'false' }}
           FORCE: ${{ inputs.force || 'false' }}
           BRANCH_FILTER: ${{ inputs.branch_filter || '' }}
-        run: bash scripts/sync-all-forks.sh
+        run: |
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "Error: GH_TOKEN is required"
+            exit 1
+          fi
+          bash scripts/sync-all-forks.sh
       - name: Write summary
         if: always()
         env:
