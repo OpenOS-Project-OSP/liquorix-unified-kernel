@@ -34,6 +34,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Check for GH_TOKEN
+        run: |
+          if [ -z "${{ secrets.GH_TOKEN }}" ]; then
+            echo "Error: GH_TOKEN is not set."
+            exit 1
+          fi
+
       - name: Mirror matched repos from upstream into OSP
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}  # Ensure the correct secret is used
