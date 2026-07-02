@@ -63,7 +63,12 @@ jobs:
           REPO_FILTER: ${{ inputs.repo_filter || '' }}
           DRY_RUN: ${{ inputs.dry_run || 'false' }}
           SOURCE_FILTER: ${{ inputs.source_filter || '' }}
-        run: bash scripts/sync-registered-imports.sh
+        run: |
+          if [ -z "${{ secrets.SYNC_TOKEN }}" ]; then
+            echo "Error: GH_TOKEN is required"
+            exit 1
+          fi
+          bash scripts/sync-registered-imports.sh
       - name: Write summary
         if: always()
         env:
