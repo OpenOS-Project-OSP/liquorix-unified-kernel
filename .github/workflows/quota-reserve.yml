@@ -1,23 +1,5 @@
 name: Quota Reserve
 
-# Enforces a minimum API quota buffer by cancelling low-priority queued runs
-# when remaining quota drops below RESERVE_FLOOR (default: 1000).
-#
-# This ensures critical operations (token rotation, queue management, config
-# validation) always have headroom regardless of how many scheduled workflows
-# are queued.
-#
-# Priority tiers — lower tier = higher priority = never cancelled first:
-#   Tier 1 CRITICAL — token rotation, queue/reserve management, config validation
-#   Tier 2 HIGH     — mirror chain, sync operations
-#   Tier 3 MEDIUM   — README updates, CI checks, rebase
-#   Tier 4 LOW      — translation, dep graph, upstream proposals (cancelled first)
-#
-# Runs every 30 minutes on schedule only — frequent enough to catch quota drops
-# before they become critical, cheap enough to not itself drain the reserve
-# (~3 calls when quota is healthy). Skips entirely when quota < 50 to avoid
-# contributing to exhaustion cascades.
-
 on:
   schedule:
     - cron: '*/30 * * * *'
@@ -41,7 +23,7 @@ on:
 
 concurrency:
   group: quota-reserve
-  cancel-in-progress: true   # Only the latest check matters
+  cancel-in-progress: true
 
 permissions:
   actions: write
